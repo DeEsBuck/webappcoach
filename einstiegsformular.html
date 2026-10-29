@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Einstiegsformular – Ausbildungsskala</title>
+<link rel="stylesheet" href="css/form.css" />
+
+</head>
+<body>
+
+<div style="display:flex; flex-direction:column; align-items:center; width:100%;">
+
+<div class="card" id="analysis">
+
+  <div class="section-header">
+    <p>Dein Pferdeprofil</p>
+    <p>Damit die Analyse zu deinem Pferd passt.</p>
+  </div>
+
+  <div class="fields">
+    <div>
+      <label class="field-label">Name des Pferdes</label>
+      <input type="text" id="pname" placeholder="z. B. Luna">
+    </div>
+    <div class="row2">
+      <div>
+        <label class="field-label">Alter</label>
+        <input type="number" id="page" placeholder="Jahre">
+      </div>
+      <div>
+        <label class="field-label">Geschlecht</label>
+        <select id="psex">
+          <option value="">Wählen</option>
+          <option value="stute">Stute</option>
+          <option value="wallach">Wallach</option>
+          <option value="hengst">Hengst</option>
+        </select>
+      </div>
+    </div>
+    <div>
+      <label class="field-label">Rasse</label>
+      <input type="text" id="pbreed" placeholder="z. B. Hannoveraner">
+    </div>
+    <div>
+      <label class="field-label">Ausrüstung / Hilfsmittel</label>
+      <input type="text" id="pgear" placeholder="z. B. Trense, Ausbinder, Sporen">
+    </div>
+    <div>
+      <label class="field-label">Ausbildungsstand des Pferdes</label>
+      <select id="plevel">
+        <option value="">Wählen</option>
+        <option value="jungpferd">Jungpferd / Anfänger</option>
+        <option value="fortgeschritten">Fortgeschritten</option>
+        <option value="turnier">Turniererfahren</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="section-header" style="margin: 1.25rem 0 1rem; padding-top: 1.25rem;">
+    <p>Was ist dir aufgefallen?</p>
+    <p>Beschreibe es in deinen eigenen Worten und wähle passende Hinweise aus.</p>
+  </div>
+
+  <div class="fields">
+    <div>
+      <textarea id="symptom" rows="3" placeholder="z. B. Mein Pferd rennt im Trab und lässt sich schwer parieren"></textarea>
+      <p id="err-symptom" class="error-text">Bitte beschreibe kurz, was dir aufgefallen ist, oder wähle mindestens einen Hinweis aus.</p>
+    </div>
+
+    <fieldset class="symptom-options">
+      <legend>Welche Hinweise passen zu deiner Beobachtung?</legend>
+      <p class="helper-text">Die Auswahl hilft, typische Formulierungen einzuordnen. Sie ersetzt keine fachliche oder tierärztliche Beurteilung.</p>
+      <div class="symptom-option-group">
+        <span class="symptom-group-label">Takt</span>
+        <label><input type="checkbox" name="symptomSignal" value="takt:eilt"> Eilt oder rennt</label>
+        <label><input type="checkbox" name="symptomSignal" value="takt:hektisch"> Wirkt hektisch oder das Tempo ist schwer zu regulieren</label>
+        <label><input type="checkbox" name="symptomSignal" value="takt:unregelmaessig"> Der Takt wirkt unregelmäßig</label>
+      </div>
+      <div class="symptom-option-group">
+        <span class="symptom-group-label">Losgelassenheit</span>
+        <label><input type="checkbox" name="symptomSignal" value="losgelassenheit:verspannt"> Wirkt verspannt oder steif</label>
+        <label><input type="checkbox" name="symptomSignal" value="losgelassenheit:ruecken"> Der Rücken wirkt fest oder blockiert</label>
+        <label><input type="checkbox" name="symptomSignal" value="losgelassenheit:kopf"> Hebt oder reißt den Kopf hoch</label>
+      </div>
+      <div class="symptom-option-group">
+        <span class="symptom-group-label">Anlehnung</span>
+        <label><input type="checkbox" name="symptomSignal" value="anlehnung:gegenhand"> Drückt gegen die Hand</label>
+        <label><input type="checkbox" name="symptomSignal" value="anlehnung:kopf"> Wirft oder schüttelt den Kopf</label>
+        <label><input type="checkbox" name="symptomSignal" value="anlehnung:verbindung"> Die Zügelverbindung oder Anlehnung ist schwierig</label>
+      </div>
+    </fieldset>
+
+    <div>
+      <label class="field-label" style="margin-bottom:6px;">In welcher Gangart tritt es auf?</label>
+      <div class="gait-options">
+        <label><input type="checkbox" name="gait" value="schritt"> Schritt</label>
+        <label><input type="checkbox" name="gait" value="trab"> Trab</label>
+        <label><input type="checkbox" name="gait" value="galopp"> Galopp</label>
+      </div>
+    </div>
+
+    <div>
+      <label class="field-label">Tritt es immer auf oder nur manchmal?</label>
+      <select id="consistency">
+        <option value="">Wählen</option>
+        <option value="immer">Jedes Mal</option>
+        <option value="manchmal">Nur manchmal</option>
+        <option value="situativ">Nur in bestimmten Situationen</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="field-label">Auch beim Longieren / an der Hand?</label>
+      <select id="context">
+        <option value="">Wählen</option>
+        <option value="nur_sattel">Nur unter dem Sattel</option>
+        <option value="auch_boden">Auch bei Bodenarbeit</option>
+      </select>
+    </div>
+
+    <div class="health-box">
+      <label><input type="checkbox" id="health"> Sattel, Zähne und Gesundheit wurden kürzlich geprüft</label>
+    </div>
+
+    <div>
+      <label class="field-label">Wie reagierst du normalerweise darauf?</label>
+      <input type="text" id="reaction" placeholder="z. B. ich ziehe an den Zügeln">
+    </div>
+
+    <div>
+      <label class="field-label">Was wäre für dich die größte Erleichterung?</label>
+      <select id="goal">
+        <option value="">Wählen</option>
+        <option value="sicherheit">Mehr Sicherheit</option>
+        <option value="ruhe">Ein ruhigeres Pferd</option>
+        <option value="basis">Eine bessere gemeinsame Basis</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="submit-wrap">
+    <button id="submitBtn" type="button">Analyse starten</button>
+  </div>
+
+</div>
+
+<div id="resultBox"></div>
+
+</div>
+<script type="text/javascript" src="js/main.js"></script>
+<script type="text/javascript" src="js/modules/metadata.js"></script>
+<script type="text/javascript" src="js/modules/form.js"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EquiCoach – Profi-Modus</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/coach.css" />
+</head>
+<body class="coach-app">
+  <header>
+    <h1>EquiCoach – Profi-Modus</h1>
+  </header>
+
+  <main class="container">
+    <div id="chatOutput" class="chat-box" role="status" aria-live="polite">Willkommen im Profi-Modus. Stelle deine Frage zu Takt, Losgelassenheit oder Anlehnung.</div>
+
+    <div class="input-area">
+      <textarea id="userPrompt" aria-label="Deine Frage an den EquiCoach" placeholder="Beschreibe das Problem mit deinem Pferd..."></textarea>
+      <button type="button" id="sendBtn" class="send-btn">Frage senden</button>
+    </div>
+
+    <section class="local-model-settings" aria-labelledby="modelSettingsTitle">
+      <h2 id="modelSettingsTitle">Lokale Modelle</h2>
+      <p id="modelStatus" class="model-status" role="status" aria-live="polite">Verbinde mit Ollama auf diesem Gerät …</p>
+      <fieldset id="modelSettings" disabled>
+        <label for="fastModel">Modell für kurze Fragen</label>
+        <select id="fastModel"></select>
+        <label for="advancedModel">Modell für komplexe Anfragen</label>
+        <select id="advancedModel"></select>
+      </fieldset>
+      <button type="button" id="refreshModelsBtn" class="refresh-models-btn">Ollama-Modelle neu laden</button>
+      <small class="ai-endpoint-note">Fragen, Trainingsdaten und die letzte Einstiegsanalyse werden direkt an Ollama auf diesem Gerät gesendet, nicht an Vercel oder Google. Für die Verbindung muss Ollama diese Website in OLLAMA_ORIGINS erlauben.</small>
+    </section>
+  </main>
+
+  <script src="js/modules/metadata.js"></script>
+  <script src="js/modules/coach.js"></script>
+</body>
+</html>

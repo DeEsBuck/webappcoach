@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>EQUICOACH TAKT</title>
+  <link rel="stylesheet" href="css/app.css" />
+
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- HEADER MIT ECHTEM 3-DISZIPLINEN LOGO ALS EMBEDDED VEKTOR -->
+    <header>
+      <div class="logo-badge">
+        <img src="img/logo.png" alt="Equicoach Logo" class="logo-img">
+      </div>
+    </header>
+
+    <!-- PAGE 1: RITT & TIMER -->
+    <div id="page-ride" class="section-page active">
+      <div class="card">
+        <div class="card-title">Live Ritt-Erfassung</div>
+        <div class="timer-display" id="timerDisplay">00:00</div>
+        <button id="startBtn" class="btn btn-start">Ritt starten</button>
+        <button id="stopBtn" class="btn btn-stop hidden">Ritt beenden</button>
+        <div id="trackingPanel" class="tracking-panel hidden">
+          <div class="tracking-label">Gangart jetzt erfassen</div>
+          <div class="gait-controls" role="group" aria-label="Aktuelle Gangart">
+            <button type="button" class="gait-btn selected" data-gait="walk" disabled>Schritt</button>
+            <button type="button" class="gait-btn" data-gait="trot" disabled>Trab</button>
+            <button type="button" class="gait-btn" data-gait="canter" disabled>Galopp</button>
+            <button type="button" class="gait-btn" data-gait="pause" disabled>Pause</button>
+          </div>
+          <div id="trackingStatus" class="tracking-status" role="status" aria-live="polite">
+            Gangart auswählen; Sensor wird beim Start verbunden.
+          </div>
+          <button type="button" id="sensorBtn" class="sensor-btn hidden">Bewegungssensor verbinden</button>
+        </div>
+      </div>
+
+      <div id="diaryCard" class="card hidden">
+        <div class="card-title">Auswertung & Dateneingabe</div>
+        
+        <div class="form-group">
+          <label>Gesamtdauer: <span id="summaryDuration" style="color:#FFE57F; font-weight:bold;">00:00</span></label>
+        </div>
+
+        <div class="form-group">
+          <label>Schritt / Lösungsphase (Minuten):</label>
+          <input type="number" id="walkMin" value="0" min="0" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label>Trab / Arbeitsphase (Minuten):</label>
+          <input type="number" id="trotMin" value="0" min="0" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label>Galopp (Minuten):</label>
+          <input type="number" id="canterMin" value="0" min="0" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label>Takt- & Schwunggefühl (Note 1 bis 6):</label>
+          <div class="rating-options">
+            <button type="button" class="rating-btn" data-val="1">1</button>
+            <button type="button" class="rating-btn" data-val="2">2</button>
+            <button type="button" class="rating-btn" data-val="3">3</button>
+            <button type="button" class="rating-btn selected" data-val="4">4</button>
+            <button type="button" class="rating-btn" data-val="5">5</button>
+            <button type="button" class="rating-btn" data-val="6">6</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Trainingsnotizen / Anmerkungen:</label>
+          <textarea id="noteInput" placeholder="Anlehnung, Biegsamkeit, Losgelassenheit, Highlights..."></textarea>
+        </div>
+
+        <button id="saveBtn" class="btn btn-save">Ritt speichern & Analysieren</button>
+      </div>
+    </div>
+
+    <!-- PAGE 2: KI-ASSISTENT -->
+    <div id="page-ai" class="section-page">
+      <div class="card">
+        <div class="card-title">KI-Reitcoach Assistent 🤖</div>
+
+        <div class="chat-output" id="chatOutput">
+          Hallo! Ich bin dein KI-Equicoach. Stelle mir eine Frage wie z. B.:<br>
+          • <i>"Mein Pferd verliert im Trab den Takt, was tun?"</i><br>
+          • <i>"Welche Übungen helfen bei fester Anlehnung?"</i>
+        </div>
+
+        <div class="form-group">
+          <label>Deine Frage an den KI-Coach:</label>
+          <textarea id="aiQuestion" placeholder="Beschreibe dein Problem oder deine Frage..."></textarea>
+          <small class="ai-endpoint-note">Für Antworten ist ein serverloser API-Endpunkt unter <code>/api/coach</code> erforderlich.</small>
+        </div>
+
+        <button id="askAiBtn" class="btn btn-save">Frage an KI senden</button>
+      </div>
+    </div>
+
+    <!-- PAGE 3: ANALYSE & TAKT-FAZIT -->
+    <div id="page-analysis" class="section-page">
+      <div class="card">
+        <div class="card-title">Letzte Ritt-Analyse</div>
+        <div id="noAnalysisMsg" style="color:#8A99AD; text-align:center;">Noch kein Ritt erfasst.</div>
+        
+        <div id="analysisContent" class="hidden">
+          <div class="form-group">
+            <label>Gangarten-Verteilung:</label>
+            <div class="bar-container">
+              <div class="bar-label"><span>Schritt</span><span id="walkPct">0%</span></div>
+              <div class="bar-bg"><div id="walkBar" class="bar-fill"></div></div>
+            </div>
+            <div class="bar-container">
+              <div class="bar-label"><span>Trab</span><span id="trotPct">0%</span></div>
+              <div class="bar-bg"><div id="trotBar" class="bar-fill"></div></div>
+            </div>
+            <div class="bar-container">
+              <div class="bar-label"><span>Galopp</span><span id="canterPct">0%</span></div>
+              <div class="bar-bg"><div id="canterBar" class="bar-fill"></div></div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:15px;">
+            <label>Takt-Fazit & Auswertung:</label>
+            <div class="fazit-box" id="fazitText">
+              Lade Analyse...
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 4: TRAININGSPLAN -->
+    <div id="page-plan" class="section-page">
+      <div class="card">
+        <div class="card-title">Wochenplaner</div>
+        <div id="weekPlanContainer"></div>
+        <button id="savePlanBtn" class="btn btn-save" style="margin-top:10px;">Plan Speichern</button>
+      </div>
+    </div>
+
+    <!-- PAGE 5: TAGEBUCH -->
+    <div id="page-history" class="section-page">
+      <div class="card">
+        <div class="card-title">Trainings-Historie</div>
+        <div id="historyContainer">
+          <div style="color:#8A99AD; text-align:center;">Noch keine Einträge.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- NAVIGATION BOTTOM BAR -->
+  <nav class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('ride')">
+      <span class="tab-icon">⏱</span>
+      <span>Ritt</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('ai')">
+      <span class="tab-icon">🤖</span>
+      <span>KI-Coach</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('analysis')">
+      <span class="tab-icon">📊</span>
+      <span>Analyse</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('plan')">
+      <span class="tab-icon">📅</span>
+      <span>Plan</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('history')">
+      <span class="tab-icon">📖</span>
+      <span>Tagebuch</span>
+    </button>
+  </nav>
+
+  <script src="js/main.js"></script>
+  <script src="js/modules/app.js"></script>
+</body>
+</html>
