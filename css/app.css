@@ -205,6 +205,23 @@
     line-height: 1.4;
   }
 
+  .sensor-note {
+    display: block;
+    margin-top: 6px;
+    color: #8A99AD;
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+
+  .sensor-debug-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    color: #8A99AD;
+    font-size: 0.82rem;
+  }
+
   .sensor-btn {
     width: 100%;
     margin-top: 10px;

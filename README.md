@@ -52,7 +52,7 @@ Durch `adb reverse` wird dieser Aufruf vom Pixel an den Server auf deinem PC wei
 3. Bewege das Pixel vorsichtig und beobachte den Status im Tracking-Bereich.
 4. Tippe auf **Ritt beenden**.
 
-Dein aktueller Code erkennt dabei nur, ob Bewegung stattfindet. **Die Gangart wird weiterhin manuell über die Tasten gewählt**; aus den Sensordaten wird noch keine automatische Takt- oder Gangartbewertung berechnet (`ridetracking.js`).
+Die Gangart wird weiterhin manuell über die Tasten gewählt. Die Sensorwerte liefern zusätzlich heuristisch erkannte Schrittimpulse, die der aktuell ausgewählten Gangart zugeordnet werden. Das ist weder eine automatische Gangarterkennung noch eine validierte Pferdeschritt- oder Taktbewertung.
 
 ### 5. Optional: Browser-Konsole am PC ansehen
 
@@ -73,3 +73,9 @@ Aktiviere die USB-Geräteerkennung und klicke beim geöffneten Pixel-Tab auf **I
   adb -s "GERÄTE-ID" reverse --remove tcp:3000
   adb -s "GERÄTE-ID" reverse tcp:3000 tcp:3000
   ```
+
+### Schrittimpulse und Sensordebugging
+
+Vor dem Start der Erfassung den Befestigungsort wählen und das Gerät dort fest anbringen. Die Auswahl „Pferd / Sattel“ verwendet momentan einen empfindlicheren, heuristischen Schwellwert als „Reiter“ oder „Anderer Ort“; diese Profile sind nicht wissenschaftlich kalibriert. Die angezeigten Schrittzahlen sind erkannte Beschleunigungsimpulse je manuell ausgewählter Gangart und keine validierte Pferdeschrittzählung.
+
+Für Messwerte in den Chrome DevTools „Sensordaten in Chrome DevTools protokollieren“ aktivieren, den Ritt starten und in `chrome://inspect/#devices` den Tab des Pixels untersuchen. In der Console nach `[EquiCoach Sensor]` filtern. Die Messwertobjekte enthalten Quelle, Befestigungsort, ausgewählte Gangart, Beschleunigungsachsen, Signalstärke, Schwellwert, Bewegungsstatus und Zählerstände. Ohne aktiviertes Debug-Logging erscheinen nur Verbindungs-, Schrittimpuls- und Sitzungszusammenfassungen.

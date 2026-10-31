@@ -2,26 +2,45 @@ window.EquiCoach = window.EquiCoach || {};
 window.EquiCoach.RideTracking = (() => {
   const storageKey = 'equi_active_start';
   const gaits = ['walk', 'trot', 'canter', 'pause'];
+  const sensorProfiles = {
+    saddle: { label: 'Pferd / Sattel', threshold: 1.0 },
+    rider: { label: 'Reiter', threshold: 1.5 },
+    other: { label: 'Anderer Ort', threshold: 1.2 }
+  };
+  const gravity = 9.81;
+  const minStepIntervalMs = 250;
   let session = null;
   let accelerometer = null;
   let deviceMotionHandler = null;
   let inactivityTimer = null;
   let lastMovementAt = 0;
   let movementDetected = false;
+  let stepArmed = true;
+  let lastStepAt = 0;
 
   function persist() {
     if (session) localStorage.setItem(storageKey, JSON.stringify(session));
   }
 
-  function start() {
+  function start(sensorMount, debugLogging) {
     const now = Date.now();
+    const selectedMount = sensorProfiles[sensorMount] ? sensorMount : 'saddle';
     session = {
       startedAt: now,
       currentGait: 'walk',
       segmentStartedAt: now,
-      durations: { walk: 0, trot: 0, canter: 0, pause: 0 }
+      durations: { walk: 0, trot: 0, canter: 0, pause: 0 },
+      stepCounts: { walk: 0, trot: 0, canter: 0, pause: 0 },
+      sensorMount: selectedMount,
+      debugLogging: debugLogging === true
     };
+    resetSensorState();
     persist();
+    console.info('[EquiCoach Sensor] Ritt gestartet', {
+      sensorMount: sensorProfiles[selectedMount].label,
+      stepThresholdMps2: sensorProfiles[selectedMount].threshold,
+      debugLogging: session.debugLogging
+    });
   }
 
   function restore() {
@@ -59,9 +78,21 @@ window.EquiCoach.RideTracking = (() => {
       startedAt: restored.startedAt,
       currentGait,
       segmentStartedAt,
-      durations
+      durations,
+      stepCounts: gaits.reduce((counts, gait) => {
+        const count = restored.stepCounts?.[gait];
+        counts[gait] = Number.isSafeInteger(count) && count >= 0 ? count : 0;
+        return counts;
+      }, {}),
+      sensorMount: sensorProfiles[restored.sensorMount] ? restored.sensorMount : 'saddle',
+      debugLogging: restored.debugLogging === true
     };
     persist();
+    resetSensorState();
+    console.info('[EquiCoach Sensor] Ritt wiederhergestellt', {
+      sensorMount: sensorProfiles[session.sensorMount].label,
+      stepCounts: { ...session.stepCounts }
+    });
     return true;
   }
 
@@ -82,44 +113,94 @@ window.EquiCoach.RideTracking = (() => {
     session.durations[session.currentGait] += Math.max(0, now - session.segmentStartedAt);
     const result = {
       elapsedMs: Math.max(0, now - session.startedAt),
-      durations: { ...session.durations }
+      durations: { ...session.durations },
+      stepCounts: { ...session.stepCounts },
+      sensorMount: session.sensorMount
     };
+    console.info('[EquiCoach Sensor] Ritt beendet', result);
     session = null;
     localStorage.removeItem(storageKey);
     stopSensor();
     return result;
   }
 
-  // Updates the movement detection based on the provided acceleration data.
-  function updateMovement(acceleration, includesGravity, onStatus) {
+  function resetSensorState() {
+    lastMovementAt = 0;
+    movementDetected = false;
+    stepArmed = true;
+    lastStepAt = 0;
+  }
+
+  function updateMovement(acceleration, includesGravity, onStatus, source, sampleTimestamp) {
     if (!acceleration || !Number.isFinite(acceleration.x) ||
         !Number.isFinite(acceleration.y) || !Number.isFinite(acceleration.z)) return;
 
     const magnitude = Math.sqrt(
       acceleration.x ** 2 + acceleration.y ** 2 + acceleration.z ** 2
     );
-    console.log(`Beschleunigungsmagnitude: ${magnitude.toFixed(3)} m/s²`);
-    
+    const signal = includesGravity ? Math.abs(magnitude - gravity) : magnitude;
+    const profile = sensorProfiles[session.sensorMount];
+    const threshold = profile.threshold;
+    const now = Date.now();
+    let stepDetected = false;
+
+    if (signal < threshold * 0.55) stepArmed = true;
+    if (signal >= threshold && stepArmed) {
+      stepArmed = false;
+      if (now - lastStepAt >= minStepIntervalMs) {
+        lastStepAt = now;
+        if (session.currentGait !== 'pause') {
+          session.stepCounts[session.currentGait] += 1;
+          stepDetected = true;
+          persist();
+          onStatus(sensorMessage());
+        }
+      }
+    }
+
     const moving = includesGravity
-      ? Math.abs(magnitude - 9.81) > 0.45
-      : magnitude > 0.35;
+      ? signal > 0.45
+      : signal > 0.35;
 
-    console.log(`Sensorbewegung: ${moving ? 'Bewegung erkannt' : 'Keine Bewegung'}`);
-
-    if (moving) lastMovementAt = Date.now();
-    const isMoving = moving || Date.now() - lastMovementAt < 1800;
+    if (moving) lastMovementAt = now;
+    const isMoving = moving || now - lastMovementAt < 1800;
     if (isMoving !== movementDetected) {
       movementDetected = isMoving;
       onStatus(sensorMessage());
     }
+
+    if (session.debugLogging) {
+      console.debug('[EquiCoach Sensor] Messwert', {
+        source,
+        sampleTimestamp,
+        sensorMount: profile.label,
+        gait: session.currentGait,
+        acceleration: {
+          x: acceleration.x,
+          y: acceleration.y,
+          z: acceleration.z
+        },
+        includesGravity,
+        magnitudeMps2: Number(magnitude.toFixed(3)),
+        movementSignalMps2: Number(signal.toFixed(3)),
+        thresholdMps2: threshold,
+        moving,
+        stepDetected,
+        stepCounts: { ...session.stepCounts }
+      });
+    } else if (stepDetected) {
+      console.info('[EquiCoach Sensor] Schrittimpuls erkannt', {
+        gait: session.currentGait,
+        count: session.stepCounts[session.currentGait],
+        sensorMount: profile.label
+      });
+    }
   }
 
-  // TODO: Logikfehler, eigentlich sollten die Tasten bei Sensor und Beschleunigung automatisch die Gangart erkennen, anstatt dass der Reiter selbst die Gangart per Taste auswählt. Die Tasten sollten nur als Fallback dienen, wenn kein Sensor verfügbar ist.
-  // Wie zählt man die Taktung, wenn der Sensor die Gangart automatisch erkennt? Man könnte die Taktung anhand der Beschleunigungssignale analysieren und eine Bewertung abgeben, anstatt dass der Reiter selbst eine Note vergibt.
   function sensorMessage() {
     return movementDetected
-      ? 'Bewegung erkannt · Gangart bitte per Taste markieren.'
-      : 'Sensor verbunden · Gangart bitte per Taste markieren.';
+      ? 'Bewegung erkannt · Gangart bitte per Taste markieren. Schrittzählung ist eine Schätzung.'
+      : 'Sensor verbunden · Gangart bitte per Taste markieren. Schrittzählung ist eine Schätzung.';
   }
 
   // Connects to the device's motion sensors and sets up event listeners for movement detection.
@@ -133,22 +214,25 @@ window.EquiCoach.RideTracking = (() => {
     try {
       if ('Accelerometer' in window) {
         try {
-          accelerometer = new window.Accelerometer({ frequency: 10 });
-          accelerometer.addEventListener('reading', () => {
-            updateMovement(accelerometer, true, onStatus);
+          accelerometer = new window.Accelerometer({ frequency: 50 });
+          const sensor = accelerometer;
+          sensor.addEventListener('reading', () => {
+            updateMovement(sensor, true, onStatus, 'Accelerometer', sensor.timestamp);
           });
 
-          accelerometer.addEventListener('error', event => {
+          sensor.addEventListener('error', event => {
             accelerometer = null;
             onStatus('Accelerometer-Fehler; versuche DeviceMotion.');
             connectDeviceMotion(onStatus).catch(error => {
               onStatus(`Sensor nicht verfügbar: ${error.message} Tracking per Tasten bleibt verfügbar.`);
             });
           });
-          console.log('Accelerometer{acceleration}:', accelerometer);
-
-          accelerometer.start();
-          onStatus('Accelerometer verbunden · Gangart Taste markieren.');
+          sensor.start();
+          onStatus('Accelerometer verbunden · Gangart bitte per Taste markieren.');
+          console.info('[EquiCoach Sensor] Accelerometer gestartet', {
+            frequencyHz: 50,
+            sensorMount: sensorProfiles[session.sensorMount].label
+          });
         } catch (error) {
           accelerometer = null;
           onStatus('Accelerometer nicht verfügbar; versuche DeviceMotion.');
@@ -186,12 +270,13 @@ window.EquiCoach.RideTracking = (() => {
 
     deviceMotionHandler = event => {
       const acceleration = event.acceleration || event.accelerationIncludingGravity;
-      updateMovement(acceleration, !event.acceleration, onStatus);
+      updateMovement(acceleration, !event.acceleration, onStatus, 'DeviceMotion', event.timeStamp);
     };
     window.addEventListener('devicemotion', deviceMotionHandler);
-    onStatus('DeviceMotion verbunden · Gangart Taste markieren.');
-
-    console.log('DeviceMotionEvent{acceleration, accelerationIncludingGravity}:', DeviceMotionEvent);
+    onStatus('DeviceMotion verbunden · Gangart bitte per Taste markieren.');
+    console.info('[EquiCoach Sensor] DeviceMotion verbunden', {
+      sensorMount: sensorProfiles[session.sensorMount].label
+    });
   }
 
   function stopSensor() {
@@ -211,8 +296,7 @@ window.EquiCoach.RideTracking = (() => {
       clearInterval(inactivityTimer);
       inactivityTimer = null;
     }
-    movementDetected = false;
-    lastMovementAt = 0;
+    resetSensorState();
   }
 
   return {
@@ -223,6 +307,9 @@ window.EquiCoach.RideTracking = (() => {
     connectSensor,
     isRunning: () => session !== null,
     getElapsedMs: () => session ? Math.max(0, Date.now() - session.startedAt) : 0,
-    getCurrentGait: () => session && session.currentGait
+    getCurrentGait: () => session && session.currentGait,
+    getStepCounts: () => session ? { ...session.stepCounts } : null,
+    getSensorMount: () => session && session.sensorMount,
+    getDebugLogging: () => session && session.debugLogging
   };
 })();

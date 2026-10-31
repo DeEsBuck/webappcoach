@@ -151,6 +151,8 @@
           walkMinutes: Number(entry.walk) || 0,
           trotMinutes: Number(entry.trot) || 0,
           canterMinutes: Number(entry.canter) || 0,
+          stepImpulseEstimate: normalizeStepCounts(entry.stepCounts),
+          sensorMount: ['saddle', 'rider', 'other'].includes(entry.sensorMount) ? entry.sensorMount : null,
           rhythmRating: Number(entry.rating) || null,
           notes: typeof entry.note === 'string' ? entry.note.slice(0, 500) : ''
         }))
@@ -162,6 +164,16 @@
         })).filter((item) => item.training)
         : []
     };
+  }
+
+  function normalizeStepCounts(counts) {
+    if (!counts || typeof counts !== 'object') return null;
+    return ['walk', 'trot', 'canter'].reduce((result, gait) => {
+      result[gait] = Number.isSafeInteger(counts[gait]) && counts[gait] >= 0
+        ? counts[gait]
+        : 0;
+      return result;
+    }, {});
   }
 
   global.equiMetadata = {
