@@ -74,6 +74,7 @@ function setupRidingButtons() {
     });
   });
 
+  // TODO: Sollte man als Fallback oder Test nutzen, falls ein Sensor verfügbar ist. Ansonsten müsse das von App selsbt entschieden werden und nicht vom Nutzer.
   sensorBtn.addEventListener('click', () => {
     RideTracking.connectSensor(setTrackingStatus);
   });
@@ -94,6 +95,7 @@ function setupRidingButtons() {
     gaitButtons.forEach(button => { button.disabled = !enabled; });
   }
 
+  // Updates the selected gait button based on the current gait from RideTracking.
   function updateSelectedGait() {
     const currentGait = RideTracking.getCurrentGait();
     gaitButtons.forEach(button => {
@@ -119,7 +121,7 @@ function setupRidingButtons() {
       if (RideTracking.isRunning()) {
         timerDisplay.innerText = formatTime(RideTracking.getElapsedMs());
       }
-    }, 500);
+    }, 1000);
   }
 
   function formatTime(milliseconds) {
@@ -145,6 +147,7 @@ function setupRidingButtons() {
   }
 }
 
+// TODO: Sollte von App selsbt durch Analyse Regeln entschieden werden und nicht vom Nutzer.
 function setupRatingButtons() {
   const ratingBtns = document.querySelectorAll('.rating-btn');
   ratingBtns.forEach(btn => {
@@ -215,6 +218,8 @@ function formatTime(ms) {
 }
 
 document.getElementById('askAiBtn').addEventListener('click', async () => {
+  // TODO: Hier könnte man die Antwort noch weiter verarbeiten, z.B. HTML-Formatierung, Markdown, etc.
+  // TODO: Man könnte auch die gespeicherten Tagebuch Einträge (history) und die Einstiegsanalyse (metadata) in die Anfrage einbeziehen, um kontextbezogene Antworten zu erhalten.
   const question = document.getElementById('aiQuestion').value.trim();
   const chatOutput = document.getElementById('chatOutput');
   const askAiBtn = document.getElementById('askAiBtn');
@@ -263,6 +268,8 @@ document.getElementById('askAiBtn').addEventListener('click', async () => {
   }
 });
 
+
+// Reit-Analyse-Output: Zusammenfassung der Reitaktivitäten und Bewertung. Keine Berechnungen
 function updateAnalysisView() {
   const history = getStored('equi_history');
   if (!history || history.length === 0) {
@@ -289,6 +296,7 @@ function updateAnalysisView() {
   document.getElementById('trotBar').style.width = tPct + '%';
   document.getElementById('canterBar').style.width = cPct + '%';
 
+  // TODO: Kann man weitere Kommentare erweitern, z.B. basierend auf der Taktbewertung, der Schrittphase oder den Notizen des Reiters.
   let fazit = "";
   if (wPct < 30) {
     fazit += "⚠️ <b>Kurze Schrittphase:</b> Achte darauf, die Lösungsphase zu Beginn ausreichend lange zu gestalten.<br><br>";
@@ -296,6 +304,7 @@ function updateAnalysisView() {
     fazit += "✅ <b>Gute Schrittbasis:</b> Ausreichend Aufwärmzeit gewählt.<br><br>";
   }
 
+  // TODO: Die Taktung sollte durch die KI-Analyse (metadata) oder durch die Sensoranalyse (ridetracking) automatisch bewertet werden, anstatt dass der Reiter selbst eine Note vergibt.
   if (last.rating >= 5) {
     fazit += "🌟 <b>Sehr hohe Taktreinheit (Note " + last.rating + "/6):</b> Das Taktgefühl war hervorragend.";
   } else if (last.rating >= 3) {
@@ -325,6 +334,7 @@ function renderWeekPlan() {
   });
 }
 
+// TODO: der Trainingplan sollte auch für metadata gespeichert werden, damit er in der KI-Analyse berücksichtigt werden kann
 document.getElementById('savePlanBtn').addEventListener('click', () => {
   const plan = days.map((_, idx) => ({
     text: document.getElementById(`plan-input-${idx}`).value,

@@ -65,6 +65,7 @@ window.EquiCoach.RideTracking = (() => {
     return true;
   }
 
+  // Updates the current gait and records the duration of the previous gait segment.
   function setGait(gait) {
     if (!session || !gaits.includes(gait)) return false;
     const now = Date.now();
@@ -89,6 +90,7 @@ window.EquiCoach.RideTracking = (() => {
     return result;
   }
 
+  // Updates the movement detection based on the provided acceleration data.
   function updateMovement(acceleration, includesGravity, onStatus) {
     if (!acceleration || !Number.isFinite(acceleration.x) ||
         !Number.isFinite(acceleration.y) || !Number.isFinite(acceleration.z)) return;
@@ -96,9 +98,13 @@ window.EquiCoach.RideTracking = (() => {
     const magnitude = Math.sqrt(
       acceleration.x ** 2 + acceleration.y ** 2 + acceleration.z ** 2
     );
+    console.log(`Beschleunigungsmagnitude: ${magnitude.toFixed(3)} m/s²`);
+    
     const moving = includesGravity
       ? Math.abs(magnitude - 9.81) > 0.45
       : magnitude > 0.35;
+
+    console.log(`Sensorbewegung: ${moving ? 'Bewegung erkannt' : 'Keine Bewegung'}`);
 
     if (moving) lastMovementAt = Date.now();
     const isMoving = moving || Date.now() - lastMovementAt < 1800;
@@ -108,12 +114,15 @@ window.EquiCoach.RideTracking = (() => {
     }
   }
 
+  // TODO: Logikfehler, eigentlich sollten die Tasten bei Sensor und Beschleunigung automatisch die Gangart erkennen, anstatt dass der Reiter selbst die Gangart per Taste auswählt. Die Tasten sollten nur als Fallback dienen, wenn kein Sensor verfügbar ist.
+  // Wie zählt man die Taktung, wenn der Sensor die Gangart automatisch erkennt? Man könnte die Taktung anhand der Beschleunigungssignale analysieren und eine Bewertung abgeben, anstatt dass der Reiter selbst eine Note vergibt.
   function sensorMessage() {
     return movementDetected
       ? 'Bewegung erkannt · Gangart bitte per Taste markieren.'
       : 'Sensor verbunden · Gangart bitte per Taste markieren.';
   }
 
+  // Connects to the device's motion sensors and sets up event listeners for movement detection.
   async function connectSensor(onStatus) {
     if (!session) return;
     if (!window.isSecureContext) {
@@ -128,6 +137,7 @@ window.EquiCoach.RideTracking = (() => {
           accelerometer.addEventListener('reading', () => {
             updateMovement(accelerometer, true, onStatus);
           });
+
           accelerometer.addEventListener('error', event => {
             accelerometer = null;
             onStatus('Accelerometer-Fehler; versuche DeviceMotion.');
@@ -135,8 +145,10 @@ window.EquiCoach.RideTracking = (() => {
               onStatus(`Sensor nicht verfügbar: ${error.message} Tracking per Tasten bleibt verfügbar.`);
             });
           });
+          console.log('Accelerometer{acceleration}:', accelerometer);
+
           accelerometer.start();
-          onStatus('Accelerometer verbunden · Gangart bitte per Taste markieren.');
+          onStatus('Accelerometer verbunden · Gangart Taste markieren.');
         } catch (error) {
           accelerometer = null;
           onStatus('Accelerometer nicht verfügbar; versuche DeviceMotion.');
@@ -177,7 +189,9 @@ window.EquiCoach.RideTracking = (() => {
       updateMovement(acceleration, !event.acceleration, onStatus);
     };
     window.addEventListener('devicemotion', deviceMotionHandler);
-    onStatus('DeviceMotion verbunden · Gangart bitte per Taste markieren.');
+    onStatus('DeviceMotion verbunden · Gangart Taste markieren.');
+
+    console.log('DeviceMotionEvent{acceleration, accelerationIncludingGravity}:', DeviceMotionEvent);
   }
 
   function stopSensor() {
