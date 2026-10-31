@@ -29,8 +29,8 @@ function parseDevices(output) {
     .split(/\r?\n/)
     .slice(1)
     .map(line => line.trim().split(/\s+/))
-    .filter(parts => parts.length > 1 && parts[1] === 'device')
-    .map(parts => parts[0]);
+    .filter(parts => parts.length > 1)
+    .map(parts => ({ serial: parts[0], state: parts[1] }));
 }
 
 async function chooseDevice(devices, requestedSerial) {
@@ -81,7 +81,18 @@ async function main() {
   }
 
   const devicesOutput = runAdb(['devices', '-l']);
-  const devices = parseDevices(devicesOutput);
+  const entries = parseDevices(devicesOutput);
+  const devices = entries.filter(entry => entry.state === 'device').map(entry => entry.serial);
+  if (devices.length === 0) {
+    const status = entries.length
+      ? entries.map(entry => `  ${entry.serial}: ${entry.state}`).join('\n')
+      : '  ADB listet kein verbundenes Gerät auf.';
+    throw new Error(
+      `Kein autorisiertes ADB-Gerät gefunden.\n${status}\n` +
+      'Prüfe USB-Kabel und USB-Debugging. Bei "unauthorized": Gerät entsperren und die USB-Debugging-Abfrage bestätigen. ' +
+      'Erst wenn `adb devices -l` den Status "device" zeigt, erneut `node launch.js` starten.'
+    );
+  }
   const serial = await chooseDevice(devices, requestedSerial);
 
   runAdb(['-s', serial, 'reverse', `tcp:${port}`, `tcp:${port}`]);

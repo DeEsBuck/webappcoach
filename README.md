@@ -32,7 +32,36 @@ Erwartet wird `HTTP/1.1 200 OK`.
 
 ### 2. Pixel verbinden und Port weiterleiten
 
-Aktiviere auf dem Pixel **Entwickleroptionen** und **USB-Debugging**, verbinde es per USB und bestätige die Debugging-Abfrage.
+Aktiviere auf dem Pixel **Entwickleroptionen** und **USB-Debugging**, verbinde es mit einem datenfähigen USB-Kabel und entsperre das Pixel. Prüfe dann in PowerShell:
+
+```powershell
+adb devices -l
+```
+
+Beim Pixel muss rechts `device` stehen. Bei `unauthorized` bestätige den Dialog **USB-Debugging zulassen?** auf dem entsperrten Pixel. Wenn nur `List of devices attached` erscheint, prüfe Kabel, USB-Port und USB-Debugging. Für eine drahtlose ADB-Verbindung ist `adb connect` nur mit der IP-Adresse und dem Port aus **Drahtloses Debugging** auf dem Pixel zu verwenden, nicht mit einer Geräte-ID.
+
+#### Kabellose Verbindung (Android 11 oder neuer)
+
+PC und Pixel müssen im selben WLAN sein. Auf dem Pixel unter **Entwickleroptionen → Drahtloses Debugging** die Funktion aktivieren und **Gerät mit Pairing-Code koppeln** auswählen. Das Pixel zeigt eine IP-Adresse, einen Pairing-Port und einen Code an. In PowerShell:
+
+```powershell
+adb pair IP-ADRESSE:PAIRING-PORT
+```
+
+Den angezeigten Pairing-Code eingeben. Danach in den Details von **Drahtloses Debugging** die IP-Adresse und den separaten ADB-Port ablesen und verbinden:
+
+```powershell
+adb connect IP-ADRESSE:ADB-PORT
+adb devices -l
+```
+
+`adb devices -l` muss das Pixel mit Status `device` auflisten. Die Geräte-ID hat meist die Form `IP-ADRESSE:ADB-PORT`. Übergib sie an den Launcher:
+
+```powershell
+node launch.js "IP-ADRESSE:ADB-PORT"
+```
+
+Pairing-Port und ADB-Port sind unterschiedliche Ports. Der ADB-Port kann sich ändern, wenn die drahtlose Debugging-Verbindung neu eingerichtet wird. Dann die aktuelle Adresse in den Pixel-Einstellungen ablesen und erneut `adb connect` ausführen. Falls die Verbindung nicht zustande kommt, WLAN-Gastnetz/Client-Isolation und eine Firewall prüfen.
 
 Starte im Projektordner in PowerShell das Launcher-Skript:
 
