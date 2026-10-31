@@ -52,7 +52,7 @@ Durch `adb reverse` wird dieser Aufruf vom Pixel an den Server auf deinem PC wei
 3. Bewege das Pixel vorsichtig und beobachte den Status im Tracking-Bereich.
 4. Tippe auf **Ritt beenden**.
 
-Dein aktueller Code erkennt dabei nur, ob Bewegung stattfindet. **Die Gangart wird weiterhin manuell über die Tasten gewählt**; aus den Sensordaten wird noch keine automatische Takt- oder Gangartbewertung berechnet (`ridetracking.js`).
+Die Gangart wird weiterhin manuell über die Tasten gewählt. Die Sensorwerte liefern zusätzlich heuristisch erkannte Schrittimpulse, die der aktuell ausgewählten Gangart zugeordnet werden. Das ist keine automatische Gangarterkennung und keine validierte Pferdeschritt- oder Taktbewertung.
 
 ### 5. Optional: Browser-Konsole am PC ansehen
 
@@ -73,3 +73,7 @@ Aktiviere die USB-Geräteerkennung und klicke beim geöffneten Pixel-Tab auf **I
   adb -s "GERÄTE-ID" reverse --remove tcp:3000
   adb -s "GERÄTE-ID" reverse tcp:3000 tcp:3000
   ```
+
+### Daten für den KI-Coach in `appcoach.html`
+
+Beim Senden einer Frage sammelt `metadata.js` die letzte Einstiegsformular-Analyse, eine Zusammenfassung des letzten Ritts, bis zu fünf aktuelle Tagebucheinträge und bis zu sieben Plan-Einträge. Leere Trainingstage werden ausgelassen. Diese begrenzten Daten werden zusammen mit der Frage an `/api/coach` übertragen und dort erneut geprüft, bevor sie als unbestätigter Kontext an den KI-Dienst gehen. Nicht vorhandene Datenbereiche bleiben leer.

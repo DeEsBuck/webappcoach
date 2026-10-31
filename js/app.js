@@ -219,7 +219,6 @@ function formatTime(ms) {
 
 document.getElementById('askAiBtn').addEventListener('click', async () => {
   // TODO: Hier könnte man die Antwort noch weiter verarbeiten, z.B. HTML-Formatierung, Markdown, etc.
-  // TODO: Man könnte auch die gespeicherten Tagebuch Einträge (history) und die Einstiegsanalyse (metadata) in die Anfrage einbeziehen, um kontextbezogene Antworten zu erhalten.
   const question = document.getElementById('aiQuestion').value.trim();
   const chatOutput = document.getElementById('chatOutput');
   const askAiBtn = document.getElementById('askAiBtn');
@@ -236,11 +235,11 @@ document.getElementById('askAiBtn').addEventListener('click', async () => {
     // API-Schlüssel niemals im Browser abfragen, speichern oder direkt an Gemini senden:
     // Clientseitige Schlüssel sind sichtbar und keine sichere Lösung für eine veröffentlichte App.
     // Der Serverless-Endpunkt liest den Schlüssel aus einer serverseitigen Umgebungsvariable.
-    const entryAnalysis = global.equiMetadata.collectEntryAnalysis();
+    const trainingMetadata = global.equiMetadata.collectTrainingMetadata();
     const response = await fetch('/api/coach', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, entryAnalysis })
+      body: JSON.stringify({ question, trainingMetadata })
     });
 
     const responseText = await response.text();
