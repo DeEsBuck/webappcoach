@@ -2,16 +2,30 @@
 
 Dein Pixel kann die **echten Bewegungssensoren** liefern. Node muss sie nicht simulieren: Der Server stellt nur die App bereit, während Chrome auf dem Pixel die Sensoren ausliest.
 
-### 1. Node-Server auf dem PC starten
+### 1. Gemini lokal und in einer Preview testen
 
-Starte den lokalen Server wie bisher auf **Port 3000** und lass das Terminal geöffnet. Prüfe auf dem PC in einem zweiten PowerShell-Fenster:
+Der lokale Entwicklungsserver verwendet dieselbe Gemini-Funktion wie das Deployment unter `/api/coach`; er gibt keine Mock-Antwort zurück.
+
+1. Verwende Node.js 20.6 oder neuer. Erstelle eine lokale Env-Datei und trage dort deinen Gemini-Schlüssel ein:
+
+   ```text
+   GEMINI_API_KEY=dein-Gemini-API-Schlüssel
+   ```
+
+   Du kannst `.env.example` nach `.env.local` kopieren. `.env.local` ist in Git ignoriert. Den Schlüssel niemals in Frontend-Dateien oder ein Commit schreiben.
+2. Für Tests am PC ohne Android-Gerät starte den Server und lass das Terminal geöffnet:
+
+   ```powershell
+   npm.cmd run dev
+   ```
+
+   Öffne danach `http://localhost:3000/appcoach.html`. Fragen werden an Gemini gesendet und können API-Kontingent verbrauchen.
+3. Für eine Vercel-Preview den Schlüssel in **Project Settings → Environment Variables** mit dem Namen `GEMINI_API_KEY` und dem Environment **Preview** hinterlegen. Wenn nur der Branch `features` den Schlüssel erhalten soll, die Preview-Branch-Einschränkung auf `features` setzen. Danach eine neue Preview-Deployment erstellen; bereits laufende Deployments übernehmen neue Variablen nicht. Schütze die Preview-URL mit Vercel Deployment Protection, damit Dritte den Gemini-Endpunkt nicht auf deine Kosten verwenden können.
+
+Prüfe den lokalen Server bei Bedarf in einem zweiten PowerShell-Fenster:
 
 ```powershell
 curl.exe -I http://127.0.0.1:3000/appcoach.html
-```
-
-```bash
-npm run dev
 ```
 
 Erwartet wird `HTTP/1.1 200 OK`.
@@ -20,20 +34,19 @@ Erwartet wird `HTTP/1.1 200 OK`.
 
 Aktiviere auf dem Pixel **Entwickleroptionen** und **USB-Debugging**, verbinde es per USB und bestätige die Debugging-Abfrage.
 
-Zeige die ADB-Geräte an:
+Starte im Projektordner in PowerShell das Launcher-Skript:
 
 ```powershell
-adb devices -l
+node launch.js
 ```
 
-Wenn das Pixel mehrfach erscheint, verwende für die Weiterleitung genau eine Geräte-ID aus der Ausgabe:
+Das Skript zeigt bei mehreren verbundenen Geräten eine Auswahl an und richtet die Weiterleitung für das gewählte Gerät ein. Du kannst die Geräte-ID auch direkt angeben:
 
 ```powershell
-adb -s "GERÄTE-ID" reverse tcp:3000 tcp:3000
-adb -s "GERÄTE-ID" reverse --list
+node launch.js "GERÄTE-ID"
 ```
 
-Ersetze `GERÄTE-ID` exakt durch die angezeigte Seriennummer. Deine frühere Ausgabe zeigte zwei Verbindungen zum Pixel; das ist der Grund für `more than one device/emulator`.
+Es startet anschließend auch den lokalen Server. Beende einen bereits laufenden Server auf Port 3000 zuerst. Mit **Ctrl+C** werden Server und ADB-Weiterleitung beendet.
 
 ### 3. App auf dem Pixel öffnen
 
