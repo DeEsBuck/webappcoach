@@ -236,10 +236,11 @@ document.getElementById('askAiBtn').addEventListener('click', async () => {
     // API-Schlüssel niemals im Browser abfragen, speichern oder direkt an Gemini senden:
     // Clientseitige Schlüssel sind sichtbar und keine sichere Lösung für eine veröffentlichte App.
     // Der Serverless-Endpunkt liest den Schlüssel aus einer serverseitigen Umgebungsvariable.
+    const entryAnalysis = global.equiMetadata.collectEntryAnalysis();
     const response = await fetch('/api/coach', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question })
+      body: JSON.stringify({ question, entryAnalysis })
     });
 
     const responseText = await response.text();

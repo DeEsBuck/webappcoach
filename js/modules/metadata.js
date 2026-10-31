@@ -166,6 +166,7 @@
 
   global.equiMetadata = {
     collectTrainingMetadata,
+    collectEntryAnalysis,
     saveEntryAnalysis
   };
 })(window);
