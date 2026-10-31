@@ -31,10 +31,17 @@ function setupRidingButtons() {
   const trackingPanel = document.getElementById('trackingPanel');
   const trackingStatus = document.getElementById('trackingStatus');
   const sensorBtn = document.getElementById('sensorBtn');
+  const sensorMount = document.getElementById('sensorMount');
+  const sensorDebug = document.getElementById('sensorDebug');
+  const liveStepCounts = document.getElementById('liveStepCounts');
   const gaitButtons = document.querySelectorAll('.gait-btn');
 
   startBtn.addEventListener('click', () => {
-    RideTracking.start();
+    RideTracking.start(sensorMount.value, sensorDebug.checked);
+    namespace.lastStepCounts = null;
+    namespace.lastSensorMount = null;
+    sensorMount.disabled = true;
+    sensorDebug.disabled = true;
     startBtn.classList.add('hidden');
     stopBtn.classList.remove('hidden');
     diaryCard.classList.add('hidden');
@@ -44,6 +51,7 @@ function setupRidingButtons() {
     updateSelectedGait();
     requestWakeLock();
     runTimer();
+    updateStepCounts();
     RideTracking.connectSensor(setTrackingStatus);
   });
 
@@ -52,8 +60,12 @@ function setupRidingButtons() {
     const result = RideTracking.stop();
     if (!result) return;
     namespace.lastElapsedMs = result.elapsedMs;
+    namespace.lastStepCounts = result.stepCounts;
+    namespace.lastSensorMount = result.sensorMount;
     clearInterval(timerInterval);
     releaseWakeLock();
+    sensorMount.disabled = false;
+    sensorDebug.disabled = false;
 
     timerDisplay.innerText = '00:00';
     stopBtn.classList.add('hidden');
@@ -62,6 +74,7 @@ function setupRidingButtons() {
     setGaitButtonsEnabled(false);
 
     document.getElementById('summaryDuration').innerText = formatTime(result.elapsedMs);
+    document.getElementById('stepSummary').textContent = formatStepCounts(result.stepCounts);
     document.getElementById('walkMin').value = minutesToInput(result.durations.walk);
     document.getElementById('trotMin').value = minutesToInput(result.durations.trot);
     document.getElementById('canterMin').value = minutesToInput(result.durations.canter);
@@ -70,7 +83,10 @@ function setupRidingButtons() {
 
   gaitButtons.forEach(button => {
     button.addEventListener('click', () => {
-      if (RideTracking.setGait(button.dataset.gait)) updateSelectedGait();
+      if (RideTracking.setGait(button.dataset.gait)) {
+        updateSelectedGait();
+        updateStepCounts();
+      }
     });
   });
 
@@ -80,6 +96,10 @@ function setupRidingButtons() {
   });
 
   if (RideTracking.restore()) {
+    sensorMount.value = RideTracking.getSensorMount();
+    sensorDebug.checked = RideTracking.getDebugLogging();
+    sensorMount.disabled = true;
+    sensorDebug.disabled = true;
     startBtn.classList.add('hidden');
     stopBtn.classList.remove('hidden');
     trackingPanel.classList.remove('hidden');
@@ -87,6 +107,7 @@ function setupRidingButtons() {
     setGaitButtonsEnabled(true);
     updateSelectedGait();
     trackingStatus.textContent = 'Ritt fortgesetzt. Bewegungssensor bei Bedarf erneut verbinden.';
+    updateStepCounts();
     requestWakeLock();
     runTimer();
   }
@@ -109,10 +130,20 @@ function setupRidingButtons() {
 
   function setTrackingStatus(message) {
     trackingStatus.textContent = message;
+    updateStepCounts();
     const sensorConnected = message.startsWith('Accelerometer verbunden') ||
       message.startsWith('DeviceMotion verbunden') ||
       message.startsWith('Bewegung erkannt');
     sensorBtn.classList.toggle('hidden', sensorConnected || !RideTracking.isRunning());
+  }
+
+  function updateStepCounts() {
+    const counts = RideTracking.getStepCounts();
+    if (counts) liveStepCounts.textContent = `Erkannte Schrittimpulse (Schätzung): ${formatStepCounts(counts)}`;
+  }
+
+  function formatStepCounts(counts) {
+    return `Schritt ${counts.walk || 0} · Trab ${counts.trot || 0} · Galopp ${counts.canter || 0}`;
   }
 
   function runTimer() {
@@ -196,6 +227,8 @@ document.getElementById('saveBtn').addEventListener('click', () => {
     trot: trot,
     canter: canter,
     rating: selectedRating,
+    stepCounts: namespace.lastStepCounts,
+    sensorMount: namespace.lastSensorMount,
     note: note || 'Keine Anmerkungen.'
   };
 
@@ -366,6 +399,8 @@ function loadHistory() {
       <div style="font-size:0.85rem; color:#D4AF37; margin-bottom:4px;">
         Takt-Note: <b>${item.rating}/6</b> | S: ${item.walk}m / T: ${item.trot}m / G: ${item.canter}m
       </div>
+      ${item.stepCounts ? `<div style="font-size:0.85rem; color:#8A99AD; margin-bottom:4px;">Schrittimpulse (Schätzung): ${escapeHtml(formatStepCounts(item.stepCounts))}</div>` : ''}
+      ${item.sensorMount ? `<div style="font-size:0.8rem; color:#8A99AD; margin-bottom:4px;">Sensorposition: ${escapeHtml(formatSensorMount(item.sensorMount))}</div>` : ''}
       <div style="font-size:0.9rem; color:#E2E8F0;">${escapeHtml(item.note)}</div>
     `;
     container.appendChild(div);
@@ -389,6 +424,21 @@ function setupHistoryDelete() {
     const button = event.target.closest('.btn-delete');
     if (button) deleteEntry(Number(button.dataset.entryId));
   });
+}
+
+function formatStepCounts(counts) {
+  const safeCount = gait => Number.isSafeInteger(counts?.[gait]) && counts[gait] >= 0
+    ? counts[gait]
+    : 0;
+  return `Schritt ${safeCount('walk')} · Trab ${safeCount('trot')} · Galopp ${safeCount('canter')}`;
+}
+
+function formatSensorMount(sensorMount) {
+  return {
+    saddle: 'Pferd / Sattel',
+    rider: 'Reiter',
+    other: 'Anderer Ort'
+  }[sensorMount] || 'Unbekannt';
 }
 
 function getStored(key) {
