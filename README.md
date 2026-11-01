@@ -1,6 +1,6 @@
 ## Kleines Sensor-Testsetup mit Android-Gerät
 
-Dein Pixel kann die **echten Bewegungssensoren** liefern. Node muss sie nicht simulieren: Der Server stellt nur die App bereit, während Chrome auf dem Pixel die Sensoren ausliest.
+Dein Device kann die **echten Bewegungssensoren** liefern. Node muss sie nicht simulieren: Der Server stellt nur die App bereit, während Chrome auf dem Device die Sensoren ausliest.
 
 ### 1. Gemini lokal und in einer Preview testen
 
@@ -30,90 +30,93 @@ curl.exe -I http://127.0.0.1:3000/appcoach.html
 
 Erwartet wird `HTTP/1.1 200 OK`.
 
-### 2. Pixel verbinden und Port weiterleiten
+### 2. Hardware-Device verbinden
 
-Aktiviere auf dem Pixel **Entwickleroptionen** und **USB-Debugging**, verbinde es mit einem datenfähigen USB-Kabel und entsperre das Pixel. Prüfe dann in PowerShell:
+#### Verbindung per USB
 
-```powershell
-adb devices -l
-```
+1. Aktiviere auf dem Device die **Entwickleroptionen** und darin **USB-Debugging**.
+2. Verbinde das entsperrte Device mit einem datenfähigen USB-Kabel mit dem PC. Bestätige auf dem Device **USB-Debugging zulassen?**. Bei Bedarf wähle in der USB-Benachrichtigung **Dateiübertragung**.
+3. Prüfe in PowerShell:
 
-Beim Pixel muss rechts `device` stehen. Bei `unauthorized` bestätige den Dialog **USB-Debugging zulassen?** auf dem entsperrten Pixel. Wenn nur `List of devices attached` erscheint, prüfe Kabel, USB-Port und USB-Debugging. Für eine drahtlose ADB-Verbindung ist `adb connect` nur mit der IP-Adresse und dem Port aus **Drahtloses Debugging** auf dem Pixel zu verwenden, nicht mit einer Geräte-ID.
+   ```powershell
+   adb devices -l
+   ```
+
+   Das Device muss mit dem Status `device` erscheinen. Bei `unauthorized` entsperre es und bestätige die Abfrage. Wird kein Device angezeigt, prüfe Kabel, USB-Port und ob USB-Debugging aktiviert ist.
 
 #### Kabellose Verbindung (Android 11 oder neuer)
 
-PC und Pixel müssen im selben WLAN sein. Auf dem Pixel unter **Entwickleroptionen → Drahtloses Debugging** die Funktion aktivieren und **Gerät mit Pairing-Code koppeln** auswählen. Das Pixel zeigt eine IP-Adresse, einen Pairing-Port und einen Code an. In PowerShell:
+PC und Device müssen im selben WLAN sein. Auf dem Device unter **Entwickleroptionen → Drahtloses Debugging** die Funktion aktivieren und **Gerät mit Pairing-Code koppeln** auswählen. In PowerShell die angezeigte IP-Adresse und den Pairing-Port verwenden:
 
 ```powershell
 adb pair IP-ADRESSE:PAIRING-PORT
 ```
 
-Den angezeigten Pairing-Code eingeben. Danach in den Details von **Drahtloses Debugging** die IP-Adresse und den separaten ADB-Port ablesen und verbinden:
+Den Pairing-Code eingeben. Danach in den Details von **Drahtloses Debugging** den separaten ADB-Port ablesen und verbinden:
 
 ```powershell
 adb connect IP-ADRESSE:ADB-PORT
 adb devices -l
 ```
 
-`adb devices -l` muss das Pixel mit Status `device` auflisten. Die Geräte-ID hat meist die Form `IP-ADRESSE:ADB-PORT`. Übergib sie an den Launcher:
+`adb devices -l` muss das Device mit Status `device` auflisten. Wenn mehrere Geräte verbunden sind, kopiere die gewünschte Geräte-ID (meist `IP-ADRESSE:ADB-PORT`).
 
-```powershell
-node launch.js "IP-ADRESSE:ADB-PORT"
-```
+### 3. Server und Debug-Verbindungen starten
 
-Pairing-Port und ADB-Port sind unterschiedliche Ports. Der ADB-Port kann sich ändern, wenn die drahtlose Debugging-Verbindung neu eingerichtet wird. Dann die aktuelle Adresse in den Pixel-Einstellungen ablesen und erneut `adb connect` ausführen. Falls die Verbindung nicht zustande kommt, WLAN-Gastnetz/Client-Isolation und eine Firewall prüfen.
-
-Starte im Projektordner in PowerShell das Launcher-Skript:
+Im Projektordner in PowerShell:
 
 ```powershell
 node launch.js
 ```
 
-Das Skript zeigt bei mehreren verbundenen Geräten eine Auswahl an und richtet die Weiterleitung für das gewählte Gerät ein. Du kannst die Geräte-ID auch direkt angeben:
+Bei mehreren ADB-Geräten fragt das Skript nach der Auswahl. Alternativ kannst du die Geräte-ID direkt übergeben:
 
 ```powershell
-node launch.js "GERÄTE-ID"
+node launch.js "IP-ADRESSE:ADB-PORT"
 ```
 
-Es startet anschließend auch den lokalen Server. Beende einen bereits laufenden Server auf Port 3000 zuerst. Mit **Ctrl+C** werden Server und ADB-Weiterleitung beendet.
+Das Skript startet den lokalen Server und richtet zwei Verbindungen ein: `adb reverse` macht den Server auf dem Device unter `localhost:3000` erreichbar; `adb forward` stellt die Chrome-DevTools-Schnittstelle für VS Code unter `localhost:9222` bereit. Port 3000 muss frei sein; falls dort bereits ein Server läuft, bricht das Skript ab, bevor es ADB-Weiterleitungen ändert. Mit **Ctrl+C** werden Server und beide ADB-Weiterleitungen beendet.
 
-### 3. App auf dem Pixel öffnen
+### 4. App öffnen und mit vscode-js-debug verbinden
 
-Öffne **Chrome auf dem Pixel** und gehe zu:
+Öffne **Chrome auf dem Device** und gehe zu:
 
 ```text
 http://localhost:3000/appcoach.html
 ```
 
-Durch `adb reverse` wird dieser Aufruf vom Pixel an den Server auf deinem PC weitergeleitet. `localhost` ist außerdem wichtig, damit der Browser den Ursprung als sicheren Kontext behandeln kann.
+`localhost` ist wichtig, damit der Browser den Ursprung als sicheren Kontext behandelt. Öffne in VS Code **Run and Debug**, wähle **Attach to Android Chrome (js-debug)** und starte mit **F5**. Die Konfiguration verwendet den in `launch.js` eingerichteten Debug-Port 9222; Breakpoints greifen in die Dateien dieses Workspaces.
 
-### 4. Bewegung testen
+### 5. Bewegung testen
 
 1. Tippe auf **Ritt starten**.
 2. Erlaube den Sensorzugriff, falls Chrome danach fragt.
-3. Bewege das Pixel vorsichtig und beobachte den Status im Tracking-Bereich.
+3. Bewege das Device vorsichtig und beobachte den Status im Tracking-Bereich.
 4. Tippe auf **Ritt beenden**.
 
 Die Gangart wird weiterhin manuell über die Tasten gewählt. Die Sensorwerte liefern zusätzlich heuristisch erkannte Schrittimpulse, die der aktuell ausgewählten Gangart zugeordnet werden. Das ist keine automatische Gangarterkennung und keine validierte Pferdeschritt- oder Taktbewertung.
 
-### 5. Optional: Browser-Konsole am PC ansehen
+### 6. Optional: Browser-Konsole am PC ansehen
 
-Für die Fehlersuche verbinde das Pixel per USB und öffne am PC Chrome:
+Für die Fehlersuche verbinde das Device per USB und öffne am PC Chrome:
 
 ```text
 chrome://inspect/#devices
 ```
 
-Aktiviere die USB-Geräteerkennung und klicke beim geöffneten Pixel-Tab auf **Inspect**. Dort siehst du JavaScript-Fehler und `console`-Meldungen.
+Aktiviere die USB-Geräteerkennung und klicke beim geöffneten Device-Tab auf **Inspect**. Dort siehst du JavaScript-Fehler und `console`-Meldungen.
 
 ### Wenn es nicht klappt
 
-- **`ERR_CONNECTION_REFUSED` auf dem Pixel:** Prüfe den `curl`-Test am PC und wiederhole `adb reverse` mit der richtigen Geräte-ID.
-- **Sensor nicht verfügbar:** Prüfe, ob du die Seite wirklich in Chrome auf dem Pixel geöffnet hast, und starte den Ritt erneut.
-- **Weiterleitung zurücksetzen:**  
+- **`ERR_CONNECTION_REFUSED` auf dem Device:** Prüfe den `curl`-Test am PC und wiederhole `adb reverse` mit der richtigen Geräte-ID.
+- **VS Code findet keinen Chrome-Tab:** Chrome auf dem Device öffnen und die URL laden, dann `node launch.js` laufen lassen und in Run and Debug **Attach to Android Chrome (js-debug)** wählen. Die Geräteverbindung muss in `adb devices -l` den Status `device` haben.
+- **Sensor nicht verfügbar:** Prüfe, ob du die Seite wirklich in Chrome auf dem Device geöffnet hast, und starte den Ritt erneut.
+- **ADB-Weiterleitungen prüfen oder zurücksetzen:**
   ```powershell
+  adb -s "GERÄTE-ID" forward --list
+  adb -s "GERÄTE-ID" reverse --list
+  adb -s "GERÄTE-ID" forward --remove tcp:9222
   adb -s "GERÄTE-ID" reverse --remove tcp:3000
-  adb -s "GERÄTE-ID" reverse tcp:3000 tcp:3000
   ```
 
 ### Daten für den KI-Coach in `appcoach.html`

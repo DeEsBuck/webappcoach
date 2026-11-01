@@ -10,6 +10,15 @@
             "request": "attach",
             "name": "Attach to Android WebView",
             "application": "com.android.chrome"
+        },
+        {
+            "type": "chrome",
+            "request": "attach",
+            "name": "Attach to Android Chrome (js-debug)",
+            "address": "127.0.0.1",
+            "port": 9222,
+            "url": "http://localhost:3000/appcoach.html",
+            "webRoot": "${workspaceFolder}"
         }
 
     ]

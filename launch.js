@@ -1,11 +1,29 @@
 const fs = require('node:fs');
+const net = require('node:net');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 const readline = require('node:readline/promises');
 
 const root = __dirname;
 const port = 3000;
+const debugPort = 9222;
 const adbCommand = process.platform === 'win32' ? 'adb.exe' : 'adb';
+
+function ensureServerPortAvailable() {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.once('error', error => {
+      if (error.code === 'EADDRINUSE') {
+        reject(new Error(`Port ${port} wird bereits verwendet. Beende den anderen lokalen Server und starte launch.js erneut.`));
+        return;
+      }
+      reject(error);
+    });
+    probe.listen(port, '127.0.0.1', () => {
+      probe.close(error => error ? reject(error) : resolve());
+    });
+  });
+}
 
 function runAdb(args, options = {}) {
   const result = spawnSync(adbCommand, args, {
@@ -68,7 +86,7 @@ async function chooseDevice(devices, requestedSerial) {
 async function main() {
   if (process.argv.includes('--help') || process.argv.includes('-h')) {
     console.log('Verwendung: node launch.js [ADB-GERÄTE-ID]');
-    console.log('Startet den lokalen Server und richtet adb reverse für Port 3000 ein.');
+    console.log('Startet den lokalen Server und richtet App- und Chrome-Debugger-Weiterleitungen ein.');
     return;
   }
 
@@ -79,6 +97,7 @@ async function main() {
   if (!fs.existsSync(path.join(root, '.env.local'))) {
     throw new Error('`.env.local` fehlt. Erstelle sie mit `Copy-Item .env.example .env.local` und trage deinen Gemini-Schlüssel ein.');
   }
+  await ensureServerPortAvailable();
 
   const devicesOutput = runAdb(['devices', '-l']);
   const entries = parseDevices(devicesOutput);
@@ -89,32 +108,54 @@ async function main() {
       : '  ADB listet kein verbundenes Gerät auf.';
     throw new Error(
       `Kein autorisiertes ADB-Gerät gefunden.\n${status}\n` +
-      'Prüfe USB-Kabel und USB-Debugging. Bei "unauthorized": Gerät entsperren und die USB-Debugging-Abfrage bestätigen. ' +
+      'Prüfe USB-Debugging. Bei "unauthorized": Gerät entsperren und die USB-Debugging-Abfrage bestätigen. ' +
+      'Für WLAN zuerst mit `adb pair IP:PAIRING-PORT` koppeln und danach mit `adb connect IP:ADB-PORT` verbinden. ' +
       'Erst wenn `adb devices -l` den Status "device" zeigt, erneut `node launch.js` starten.'
     );
   }
   const serial = await chooseDevice(devices, requestedSerial);
 
-  runAdb(['-s', serial, 'reverse', `tcp:${port}`, `tcp:${port}`]);
-  console.log(`ADB-Weiterleitung eingerichtet: ${serial} → Port ${port}`);
+  let reverseActive = false;
+  let forwardActive = false;
+  const removeForwardings = () => {
+    if (forwardActive) {
+      try {
+        runAdb(['-s', serial, 'forward', '--remove', `tcp:${debugPort}`], { stdio: 'ignore' });
+        forwardActive = false;
+      } catch (error) {
+        console.error(`ADB-Debugger-Weiterleitung konnte nicht entfernt werden: ${error.message}`);
+      }
+    }
+    if (reverseActive) {
+      try {
+        runAdb(['-s', serial, 'reverse', '--remove', `tcp:${port}`], { stdio: 'ignore' });
+        reverseActive = false;
+      } catch (error) {
+        console.error(`ADB-App-Weiterleitung konnte nicht entfernt werden: ${error.message}`);
+      }
+    }
+  };
+
+  try {
+    runAdb(['-s', serial, 'reverse', `tcp:${port}`, `tcp:${port}`]);
+    reverseActive = true;
+    runAdb(['-s', serial, 'forward', `tcp:${debugPort}`, 'localabstract:chrome_devtools_remote']);
+    forwardActive = true;
+  } catch (error) {
+    removeForwardings();
+    throw error;
+  }
+
+  console.log(`ADB-App-Weiterleitung eingerichtet: ${serial} → Port ${port}`);
+  console.log(`Chrome-DevTools-Weiterleitung eingerichtet: localhost:${debugPort}`);
   console.log(`Starte Server unter http://localhost:${port}/appcoach.html (mit Ctrl+C beenden).`);
 
   let stopping = false;
-  let reverseActive = true;
   let serverProcess;
-  const removeReverse = () => {
-    if (!reverseActive) return;
-    reverseActive = false;
-    runAdb(['-s', serial, 'reverse', '--remove', `tcp:${port}`], { stdio: 'ignore' });
-  };
   const stop = signal => {
     if (stopping) return;
     stopping = true;
-    try {
-      removeReverse();
-    } catch (error) {
-      console.error(`ADB-Weiterleitung konnte nicht entfernt werden: ${error.message}`);
-    }
+    removeForwardings();
     if (serverProcess && serverProcess.exitCode === null) {
       serverProcess.kill();
     }
@@ -131,19 +172,11 @@ async function main() {
   );
   serverProcess.once('error', error => {
     console.error(`Der lokale Server konnte nicht gestartet werden: ${error.message}`);
-    try {
-      removeReverse();
-    } catch (cleanupError) {
-      console.error(`ADB-Weiterleitung konnte nicht entfernt werden: ${cleanupError.message}`);
-    }
+    removeForwardings();
     process.exitCode = 1;
   });
   serverProcess.once('exit', (code, signal) => {
-    try {
-      removeReverse();
-    } catch (error) {
-      console.error(`ADB-Weiterleitung konnte nicht entfernt werden: ${error.message}`);
-    }
+    removeForwardings();
     if (!stopping) process.exitCode = signal ? 1 : (code ?? 1);
   });
 }
