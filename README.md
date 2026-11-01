@@ -1,81 +1,124 @@
 ## Kleines Sensor-Testsetup mit Android-Gerät
 
-Dein Pixel kann die **echten Bewegungssensoren** liefern. Node muss sie nicht simulieren: Der Server stellt nur die App bereit, während Chrome auf dem Pixel die Sensoren ausliest.
+Dein Device kann die **echten Bewegungssensoren** liefern. Node muss sie nicht simulieren: Der Server stellt nur die App bereit, während Chrome auf dem Device die Sensoren ausliest.
 
-### 1. Node-Server auf dem PC starten
+### 1. Gemini lokal und in einer Preview testen
 
-Starte den lokalen Server wie bisher auf **Port 3000** und lass das Terminal geöffnet. Prüfe auf dem PC in einem zweiten PowerShell-Fenster:
+Der lokale Entwicklungsserver verwendet dieselbe Gemini-Funktion wie das Deployment unter `/api/coach`; er gibt keine Mock-Antwort zurück.
+
+1. Verwende Node.js 20.6 oder neuer. Erstelle eine lokale Env-Datei und trage dort deinen Gemini-Schlüssel ein:
+
+   ```text
+   GEMINI_API_KEY=dein-Gemini-API-Schlüssel
+   ```
+
+   Du kannst `.env.example` nach `.env.local` kopieren. `.env.local` ist in Git ignoriert. Den Schlüssel niemals in Frontend-Dateien oder ein Commit schreiben.
+2. Für Tests am PC ohne Android-Gerät starte den Server und lass das Terminal geöffnet:
+
+   ```powershell
+   npm.cmd run dev
+   ```
+
+   Öffne danach `http://localhost:3000/appcoach.html`. Fragen werden an Gemini gesendet und können API-Kontingent verbrauchen.
+3. Für eine Vercel-Preview den Schlüssel in **Project Settings → Environment Variables** mit dem Namen `GEMINI_API_KEY` und dem Environment **Preview** hinterlegen. Wenn nur der Branch `features` den Schlüssel erhalten soll, die Preview-Branch-Einschränkung auf `features` setzen. Danach eine neue Preview-Deployment erstellen; bereits laufende Deployments übernehmen neue Variablen nicht. Schütze die Preview-URL mit Vercel Deployment Protection, damit Dritte den Gemini-Endpunkt nicht auf deine Kosten verwenden können.
+
+Prüfe den lokalen Server bei Bedarf in einem zweiten PowerShell-Fenster:
 
 ```powershell
 curl.exe -I http://127.0.0.1:3000/appcoach.html
 ```
 
-```bash
-npm run dev
-```
-
 Erwartet wird `HTTP/1.1 200 OK`.
 
-### 2. Pixel verbinden und Port weiterleiten
+### 2. Hardware-Device verbinden
 
-Aktiviere auf dem Pixel **Entwickleroptionen** und **USB-Debugging**, verbinde es per USB und bestätige die Debugging-Abfrage.
+#### Verbindung per USB
 
-Zeige die ADB-Geräte an:
+1. Aktiviere auf dem Device die **Entwickleroptionen** und darin **USB-Debugging**.
+2. Verbinde das entsperrte Device mit einem datenfähigen USB-Kabel mit dem PC. Bestätige auf dem Device **USB-Debugging zulassen?**. Bei Bedarf wähle in der USB-Benachrichtigung **Dateiübertragung**.
+3. Prüfe in PowerShell:
+
+   ```powershell
+   adb devices -l
+   ```
+
+   Das Device muss mit dem Status `device` erscheinen. Bei `unauthorized` entsperre es und bestätige die Abfrage. Wird kein Device angezeigt, prüfe Kabel, USB-Port und ob USB-Debugging aktiviert ist.
+
+#### Kabellose Verbindung (Android 11 oder neuer)
+
+PC und Device müssen im selben WLAN sein. Auf dem Device unter **Entwickleroptionen → Drahtloses Debugging** die Funktion aktivieren und **Gerät mit Pairing-Code koppeln** auswählen. In PowerShell die angezeigte IP-Adresse und den Pairing-Port verwenden:
 
 ```powershell
+adb pair IP-ADRESSE:PAIRING-PORT
+```
+
+Den Pairing-Code eingeben. Danach in den Details von **Drahtloses Debugging** den separaten ADB-Port ablesen und verbinden:
+
+```powershell
+adb connect IP-ADRESSE:ADB-PORT
 adb devices -l
 ```
 
-Wenn das Pixel mehrfach erscheint, verwende für die Weiterleitung genau eine Geräte-ID aus der Ausgabe:
+`adb devices -l` muss das Device mit Status `device` auflisten. Wenn mehrere Geräte verbunden sind, kopiere die gewünschte Geräte-ID (meist `IP-ADRESSE:ADB-PORT`).
+
+### 3. Server und Debug-Verbindungen starten
+
+Im Projektordner in PowerShell:
 
 ```powershell
-adb -s "GERÄTE-ID" reverse tcp:3000 tcp:3000
-adb -s "GERÄTE-ID" reverse --list
+node launch.js
 ```
 
-Ersetze `GERÄTE-ID` exakt durch die angezeigte Seriennummer. Deine frühere Ausgabe zeigte zwei Verbindungen zum Pixel; das ist der Grund für `more than one device/emulator`.
+Bei mehreren ADB-Geräten fragt das Skript nach der Auswahl. Alternativ kannst du die Geräte-ID direkt übergeben:
 
-### 3. App auf dem Pixel öffnen
+```powershell
+node launch.js "IP-ADRESSE:ADB-PORT"
+```
 
-Öffne **Chrome auf dem Pixel** und gehe zu:
+Das Skript startet den lokalen Server und richtet zwei Verbindungen ein: `adb reverse` macht den Server auf dem Device unter `localhost:3000` erreichbar; `adb forward` stellt die Chrome-DevTools-Schnittstelle für VS Code unter `localhost:9222` bereit. Port 3000 muss frei sein; falls dort bereits ein Server läuft, bricht das Skript ab, bevor es ADB-Weiterleitungen ändert. Mit **Ctrl+C** werden Server und beide ADB-Weiterleitungen beendet.
+
+### 4. App öffnen und mit vscode-js-debug verbinden
+
+Öffne **Chrome auf dem Device** und gehe zu:
 
 ```text
 http://localhost:3000/appcoach.html
 ```
 
-Durch `adb reverse` wird dieser Aufruf vom Pixel an den Server auf deinem PC weitergeleitet. `localhost` ist außerdem wichtig, damit der Browser den Ursprung als sicheren Kontext behandeln kann.
+`localhost` ist wichtig, damit der Browser den Ursprung als sicheren Kontext behandelt. Öffne in VS Code **Run and Debug**, wähle **Attach to Android Chrome (js-debug)** und starte mit **F5**. Die Konfiguration verwendet den in `launch.js` eingerichteten Debug-Port 9222; Breakpoints greifen in die Dateien dieses Workspaces.
 
-### 4. Bewegung testen
+### 5. Bewegung testen
 
 1. Tippe auf **Ritt starten**.
 2. Erlaube den Sensorzugriff, falls Chrome danach fragt.
-3. Bewege das Pixel vorsichtig und beobachte den Status im Tracking-Bereich.
+3. Bewege das Device vorsichtig und beobachte den Status im Tracking-Bereich.
 4. Tippe auf **Ritt beenden**.
 
-Die Gangart wird weiterhin manuell über die Tasten gewählt. Die Sensorwerte liefern zusätzlich heuristisch erkannte Schrittimpulse, die der aktuell ausgewählten Gangart zugeordnet werden. Das ist weder eine automatische Gangarterkennung noch eine validierte Pferdeschritt- oder Taktbewertung.
+Die Gangart wird weiterhin manuell über die Tasten gewählt. Die Sensorwerte liefern zusätzlich heuristisch erkannte Schrittimpulse, die der aktuell ausgewählten Gangart zugeordnet werden. Das ist keine automatische Gangarterkennung und keine validierte Pferdeschritt- oder Taktbewertung.
 
-### 5. Optional: Browser-Konsole am PC ansehen
+### 6. Optional: Browser-Konsole am PC ansehen
 
-Für die Fehlersuche verbinde das Pixel per USB und öffne am PC Chrome:
+Für die Fehlersuche verbinde das Device per USB und öffne am PC Chrome:
 
 ```text
 chrome://inspect/#devices
 ```
 
-Aktiviere die USB-Geräteerkennung und klicke beim geöffneten Pixel-Tab auf **Inspect**. Dort siehst du JavaScript-Fehler und `console`-Meldungen.
+Aktiviere die USB-Geräteerkennung und klicke beim geöffneten Device-Tab auf **Inspect**. Dort siehst du JavaScript-Fehler und `console`-Meldungen.
 
 ### Wenn es nicht klappt
 
-- **`ERR_CONNECTION_REFUSED` auf dem Pixel:** Prüfe den `curl`-Test am PC und wiederhole `adb reverse` mit der richtigen Geräte-ID.
-- **Sensor nicht verfügbar:** Prüfe, ob du die Seite wirklich in Chrome auf dem Pixel geöffnet hast, und starte den Ritt erneut.
-- **Weiterleitung zurücksetzen:**  
+- **`ERR_CONNECTION_REFUSED` auf dem Device:** Prüfe den `curl`-Test am PC und wiederhole `adb reverse` mit der richtigen Geräte-ID.
+- **VS Code findet keinen Chrome-Tab:** Chrome auf dem Device öffnen und die URL laden, dann `node launch.js` laufen lassen und in Run and Debug **Attach to Android Chrome (js-debug)** wählen. Die Geräteverbindung muss in `adb devices -l` den Status `device` haben.
+- **Sensor nicht verfügbar:** Prüfe, ob du die Seite wirklich in Chrome auf dem Device geöffnet hast, und starte den Ritt erneut.
+- **ADB-Weiterleitungen prüfen oder zurücksetzen:**
   ```powershell
+  adb -s "GERÄTE-ID" forward --list
+  adb -s "GERÄTE-ID" reverse --list
+  adb -s "GERÄTE-ID" forward --remove tcp:9222
   adb -s "GERÄTE-ID" reverse --remove tcp:3000
-  adb -s "GERÄTE-ID" reverse tcp:3000 tcp:3000
   ```
 
-### Schrittimpulse und Sensordebugging
+### Daten für den KI-Coach in `appcoach.html`
 
-Vor dem Start der Erfassung den Befestigungsort wählen und das Gerät dort fest anbringen. Die Auswahl „Pferd / Sattel“ verwendet momentan einen empfindlicheren, heuristischen Schwellwert als „Reiter“ oder „Anderer Ort“; diese Profile sind nicht wissenschaftlich kalibriert. Die angezeigten Schrittzahlen sind erkannte Beschleunigungsimpulse je manuell ausgewählter Gangart und keine validierte Pferdeschrittzählung.
-
-Für Messwerte in den Chrome DevTools „Sensordaten in Chrome DevTools protokollieren“ aktivieren, den Ritt starten und in `chrome://inspect/#devices` den Tab des Pixels untersuchen. In der Console nach `[EquiCoach Sensor]` filtern. Die Messwertobjekte enthalten Quelle, Befestigungsort, ausgewählte Gangart, Beschleunigungsachsen, Signalstärke, Schwellwert, Bewegungsstatus und Zählerstände. Ohne aktiviertes Debug-Logging erscheinen nur Verbindungs-, Schrittimpuls- und Sitzungszusammenfassungen.
+Beim Senden einer Frage sammelt `metadata.js` die letzte Einstiegsformular-Analyse, eine Zusammenfassung des letzten Ritts, bis zu fünf aktuelle Tagebucheinträge und bis zu sieben Plan-Einträge. Leere Trainingstage werden ausgelassen. Diese begrenzten Daten werden zusammen mit der Frage an `/api/coach` übertragen und dort erneut geprüft, bevor sie als unbestätigter Kontext an den KI-Dienst gehen. Nicht vorhandene Datenbereiche bleiben leer.

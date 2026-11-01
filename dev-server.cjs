@@ -3,6 +3,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = __dirname;
+const coachHandler = require('./api/coach');
+const maxRequestSize = 16 * 1024;
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -23,7 +25,7 @@ async function readJson(req) {
 
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > 16 * 1024) {
+    if (size > maxRequestSize) {
       throw Object.assign(new Error('Anfrage ist zu groß.'), { status: 413 });
     }
     chunks.push(chunk);
@@ -36,28 +38,48 @@ async function readJson(req) {
   }
 }
 
+function createFunctionResponse(res) {
+  const response = {
+    setHeader(name, value) {
+      res.setHeader(name, value);
+    },
+    status(statusCode) {
+      res.statusCode = statusCode;
+      return this;
+    },
+    json(data) {
+      sendJson(res, res.statusCode || 200, data);
+      return this;
+    }
+  };
+  return response;
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
 
   if (url.pathname === '/api/coach') {
-    if (req.method !== 'POST') {
-      res.setHeader('Allow', 'POST');
-      return sendJson(res, 405, { error: 'Nur POST ist erlaubt.' });
-    }
-
     try {
-      const body = await readJson(req);
-      const question = body?.question;
-
-      if (typeof question !== 'string' || !question.trim()) {
-        return sendJson(res, 400, { error: 'Bitte gib eine Frage ein.' });
+      if (req.method !== 'POST') {
+        return await coachHandler(req, createFunctionResponse(res));
       }
 
-      return sendJson(res, 200, {
-        answer: `Lokale Testantwort – die echte KI wurde nicht aufgerufen.\n\nDeine Frage: ${question.trim().slice(0, 500)}`
-      });
+      if (!process.env.GEMINI_API_KEY) {
+        return sendJson(res, 500, {
+          error: 'GEMINI_API_KEY fehlt. Lege den Schlüssel in .env.local ab und starte den Dev-Server neu.'
+        });
+      }
+
+      req.body = await readJson(req);
+      return await coachHandler(req, createFunctionResponse(res));
     } catch (error) {
-      return sendJson(res, error.status || 500, { error: error.message });
+      if (res.headersSent) {
+        res.destroy(error);
+        return;
+      }
+      return sendJson(res, error.status || 500, {
+        error: error.status ? error.message : 'Die lokale KI-Anfrage ist fehlgeschlagen.'
+      });
     }
   }
 
@@ -78,11 +100,17 @@ const server = http.createServer(async (req, res) => {
 
   const filePath = path.resolve(root, `.${pathname}`);
   const relativePath = path.relative(root, filePath);
+  const pathParts = relativePath.split(path.sep);
+  const isAllowedFile = pathParts.length === 1
+    ? path.extname(relativePath).toLowerCase() === '.html'
+    : ['css', 'img', 'js'].includes(pathParts[0]);
 
   if (
     relativePath === '..' ||
     relativePath.startsWith(`..${path.sep}`) ||
-    path.isAbsolute(relativePath)
+    path.isAbsolute(relativePath) ||
+    !isAllowedFile ||
+    pathParts.some(part => part.startsWith('.'))
   ) {
     res.writeHead(403);
     return res.end('Forbidden');
