@@ -23,6 +23,19 @@
       <div class="card">
         <div class="card-title">Live Ritt-Erfassung</div>
         <div class="timer-display" id="timerDisplay">00:00</div>
+        <div class="form-group">
+          <label for="sensorMount">Sensor befestigt an</label>
+          <select id="sensorMount">
+            <option value="saddle">Pferd / Sattel</option>
+            <option value="rider">Reiter (z. B. Tasche)</option>
+            <option value="other">Anderer Ort</option>
+          </select>
+          <small class="sensor-note">Das Sensorprofil ändert den heuristischen Schwellwert. Gerät fest und immer an derselben Stelle befestigen. Schrittzahlen sind erkannte Bewegungsimpulse, keine validierte Pferdeschrittzählung.</small>
+        </div>
+        <label class="sensor-debug-option">
+          <input type="checkbox" id="sensorDebug">
+          Sensordaten in Chrome DevTools protokollieren
+        </label>
         <button id="startBtn" class="btn btn-start">Ritt starten</button>
         <button id="stopBtn" class="btn btn-stop hidden">Ritt beenden</button>
         <div id="trackingPanel" class="tracking-panel hidden">
@@ -36,6 +49,7 @@
           <div id="trackingStatus" class="tracking-status" role="status" aria-live="polite">
             Gangart auswählen; Sensor wird beim Start verbunden.
           </div>
+          <p id="liveStepCounts" class="tracking-status" aria-live="polite">Erkannte Schrittimpulse (Schätzung): Schritt 0 · Trab 0 · Galopp 0</p>
           <button type="button" id="sensorBtn" class="sensor-btn hidden">Bewegungssensor verbinden</button>
         </div>
       </div>
@@ -45,6 +59,10 @@
         
         <div class="form-group">
           <label>Gesamtdauer: <span id="summaryDuration" style="color:#FFE57F; font-weight:bold;">00:00</span></label>
+        </div>
+        <div class="form-group">
+          <label>Erkannte Schrittimpulse (Schätzung)</label>
+          <p id="stepSummary" class="sensor-note">Schritt 0 · Trab 0 · Galopp 0</p>
         </div>
 
         <div class="form-group">

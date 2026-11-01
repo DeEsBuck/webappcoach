@@ -217,6 +217,16 @@
     };
   }
 
+  function normalizeStepCounts(counts) {
+    if (!counts || typeof counts !== 'object') return null;
+    return ['walk', 'trot', 'canter'].reduce((result, gait) => {
+      result[gait] = Number.isSafeInteger(counts[gait]) && counts[gait] >= 0
+        ? counts[gait]
+        : 0;
+      return result;
+    }, {});
+  }
+
   global.equiMetadata = {
     collectTrainingMetadata,
     collectEntryAnalysis,
