@@ -2,8 +2,14 @@
 'use strict';
 
 const namespace = global.EquiCoach || (global.EquiCoach = {});
+const gaitAnalyzer = namespace.GaitAnalyzer;
+if (!gaitAnalyzer) throw new Error('Das Ganganalyse-Modul wurde nicht geladen.');
+const SensorCalibration = namespace.SensorCalibration;
+if (!SensorCalibration) throw new Error('Das Sensorkalibrierungs-Modul wurde nicht geladen.');
 const RideTracking = namespace.RideTracking;
 if (!RideTracking) throw new Error('Das Ritt-Tracking-Modul wurde nicht geladen.');
+const Charts = namespace.Charts;
+if (!Charts) throw new Error('Das Diagramm-Modul wurde nicht geladen.');
 
 let selectedRating = 4;
 const days = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
@@ -33,20 +39,188 @@ function setupRidingButtons() {
   const sensorBtn = document.getElementById('sensorBtn');
   const sensorMount = document.getElementById('sensorMount');
   const sensorDebug = document.getElementById('sensorDebug');
+  const calibrationToggle = document.getElementById('calibrationToggle');
+  const calibrationPanel = document.getElementById('calibrationPanel');
+  const calibrationGait = document.getElementById('calibrationGait');
+  const captureCalibrationBtn = document.getElementById('captureCalibrationBtn');
+  const cancelCalibrationBtn = document.getElementById('cancelCalibrationBtn');
+  const clearCalibrationBtn = document.getElementById('clearCalibrationBtn');
+  const confirmCalibrationBtn = document.getElementById('confirmCalibrationBtn');
+  const calibrationProgress = document.getElementById('calibrationProgress');
+  const calibrationStatus = document.getElementById('calibrationStatus');
+  const calibrationResults = document.getElementById('calibrationResults');
+  const gaitModeStatus = document.getElementById('gaitModeStatus');
+  const gaitMotionStatus = document.getElementById('gaitMotionStatus');
   const liveStepCounts = document.getElementById('liveStepCounts');
   const gaitButtons = document.querySelectorAll('.gait-btn');
+  const gaitLabels = { walk: 'Schritt', trot: 'Trab', canter: 'Galopp' };
+
+  renderCalibrationResults();
+  calibrationToggle.addEventListener('click', () => {
+    const opening = calibrationPanel.classList.contains('hidden');
+    calibrationPanel.classList.toggle('hidden', !opening);
+    if (opening) renderCalibrationResults();
+  });
+  sensorMount.addEventListener('change', renderCalibrationResults);
+
+  captureCalibrationBtn.addEventListener('click', async () => {
+    setCalibrationControls(true);
+    calibrationProgress.value = 0;
+    calibrationProgress.classList.remove('hidden');
+    calibrationStatus.textContent = 'Sensor wird verbunden. Halte die gewählte Gangart während der Aufnahme möglichst gleichmäßig.';
+
+    try {
+      const result = await SensorCalibration.capture(
+        sensorMount.value,
+        calibrationGait.value,
+        progress => { calibrationProgress.value = progress; }
+      );
+      const gait = gaitLabels[calibrationGait.value];
+      const bpm = result.capture.analysis.bpm;
+      calibrationStatus.textContent = `${gait}-Messung lokal gespeichert (${result.capture.sampleCount} Messwerte` +
+        `${bpm ? `, Analyzer-Rhythmus ${bpm}/min` : ', noch kein klarer Rhythmus erkannt'}` +
+        `${result.replacedOldest ? ', älteste Messung ersetzt' : ''}).`;
+      renderCalibrationResults();
+    } catch (error) {
+      calibrationStatus.textContent = error.name === 'AbortError'
+        ? 'Aufnahme abgebrochen; es wurde keine Messung gespeichert.'
+        : error.message;
+    } finally {
+      setCalibrationControls(false);
+      calibrationProgress.classList.add('hidden');
+    }
+  });
+
+  cancelCalibrationBtn.addEventListener('click', () => SensorCalibration.cancel());
+
+  confirmCalibrationBtn.addEventListener('click', () => {
+    if (!window.confirm(
+      'Kalibrierung für diese Sensorposition bestätigen und die automatische Gangartwahl aktivieren? ' +
+      'Die Erkennung bleibt experimentell und kann sich irren.'
+    )) return;
+    try {
+      SensorCalibration.confirm(sensorMount.value);
+      calibrationStatus.textContent = 'Kalibrierung bestätigt. Die automatische Gangartwahl wird beim nächsten Ritt aktiviert.';
+      renderCalibrationResults();
+    } catch (error) {
+      calibrationStatus.textContent = `Automatische Gangartwahl konnte nicht aktiviert werden: ${error.message}`;
+      renderCalibrationResults();
+    }
+  });
+
+  clearCalibrationBtn.addEventListener('click', () => {
+    if (!window.confirm('Alle lokalen Kalibrierungsmessungen für diese Sensorposition löschen?')) return;
+    try {
+      SensorCalibration.clearMount(sensorMount.value);
+      calibrationStatus.textContent = 'Lokale Messungen dieser Sensorposition wurden gelöscht.';
+      renderCalibrationResults();
+    } catch (error) {
+      calibrationStatus.textContent = `Kalibrierung konnte nicht gelöscht werden: ${error.message}`;
+    }
+  });
+
+  function setCalibrationControls(disabled) {
+    captureCalibrationBtn.disabled = disabled;
+    clearCalibrationBtn.disabled = disabled;
+    if (disabled) {
+      confirmCalibrationBtn.disabled = true;
+    } else {
+      try {
+        confirmCalibrationBtn.disabled = !SensorCalibration.getSummary(sensorMount.value).ready;
+      } catch (error) {
+        confirmCalibrationBtn.disabled = true;
+        calibrationStatus.textContent = `Lokale Kalibrierungsdaten konnten nicht gelesen werden: ${error.message}`;
+      }
+    }
+    calibrationToggle.disabled = disabled;
+    sensorMount.disabled = disabled;
+    calibrationGait.disabled = disabled;
+    startBtn.disabled = disabled;
+    cancelCalibrationBtn.classList.toggle('hidden', !disabled);
+  }
+
+  function renderCalibrationResults() {
+    try {
+      const summary = SensorCalibration.getSummary(sensorMount.value);
+      confirmCalibrationBtn.disabled = !summary.ready;
+      calibrationResults.replaceChildren();
+      calibrationStatus.textContent = summary.confirmed
+        ? 'Kalibrierung für diese Sensorposition bestätigt. Eine neue Messung hebt die Bestätigung auf.'
+        : summary.ready
+          ? 'Messungen sind auswertbar. Bestätige die Kalibrierung, um automatische Gangartwahl zu aktivieren.'
+          : summary.reason || 'Für die automatische Gangartwahl fehlen noch verwertbare Vergleichsmessungen.';
+      Object.entries(gaitLabels).forEach(([gait, label]) => {
+        const captures = summary[gait];
+        const row = document.createElement('div');
+        row.className = 'calibration-result';
+        const heading = document.createElement('strong');
+        heading.textContent = `${label}: ${captures.length}/${SensorCalibration.maxCapturesPerGait} Messungen`;
+        row.appendChild(heading);
+        captures.forEach((capture, index) => {
+          const detail = document.createElement('div');
+          const { analysis } = capture;
+          const agreement = analysis.label === label ? 'passt zur Markierung' : 'weicht von der Markierung ab';
+          const intervalVariation = Number.isFinite(analysis.intervalVariationPercent)
+            ? ` · Intervallstreuung ${analysis.intervalVariationPercent.toFixed(1)}%`
+            : '';
+          const signalDeviation = Number.isFinite(analysis.signalDeviation)
+            ? ` · Beschleunigungsstreuung ${analysis.signalDeviation.toFixed(2)} m/s²`
+            : '';
+          detail.textContent = `Messung ${index + 1}: ${analysis.bpm || '—'} Impulse/min · Analyzer: ${analysis.label} (${agreement})${intervalVariation}${signalDeviation} · ${capture.sampleCount} Werte`;
+          row.appendChild(detail);
+        });
+        calibrationResults.appendChild(row);
+      });
+    } catch (error) {
+      confirmCalibrationBtn.disabled = true;
+      calibrationResults.textContent = `Lokale Kalibrierungsdaten konnten nicht gelesen werden: ${error.message}`;
+    }
+  }
+
+  function updateGaitModeStatus() {
+    if (!RideTracking.isAutoGaitEnabled()) {
+      gaitModeStatus.textContent = 'Manuelle Gangartwahl aktiv · keine bestätigte Kalibrierung für diese Sensorposition.';
+      gaitMotionStatus.textContent = 'Keine bestätigte Kalibrierung: Rhythmusunregelmäßigkeit und Bewegungsdynamik werden nicht bewertet.';
+    } else if (RideTracking.isAutoGaitPaused()) {
+      gaitModeStatus.textContent = 'Automatische Gangartwahl pausiert · eine aktive Gangart-Taste setzt sie fort.';
+      gaitMotionStatus.textContent = 'Analyse pausiert. Eine aktive Gangart-Taste setzt die kalibrierte Vergleichsanalyse fort.';
+    } else {
+      gaitModeStatus.textContent = 'Automatische Gangartwahl aktiv (kalibriert) · bei unsicherer Schätzung bleibt die aktuelle Auswahl bestehen. Pause bleibt manuell.';
+      gaitMotionStatus.textContent = 'Warte auf ausreichend klare Rhythmusfenster für den Kalibrierungsvergleich.';
+    }
+  }
+
+  function updateGaitAnalysisDisplay() {
+    renderGaitAnalysisSummary(gaitMotionStatus, RideTracking.getGaitAnalysisSummary(), {
+      live: true,
+      enabled: RideTracking.isAutoGaitEnabled(),
+      paused: RideTracking.isAutoGaitPaused()
+    });
+  }
 
   startBtn.addEventListener('click', () => {
-    RideTracking.start(sensorMount.value, sensorDebug.checked);
+    let calibratedProfile;
+    try {
+      calibratedProfile = SensorCalibration.getConfirmedProfile(sensorMount.value);
+    } catch (error) {
+      calibrationStatus.textContent = `Lokale Kalibrierung konnte nicht gelesen werden: ${error.message}`;
+      calibrationPanel.classList.remove('hidden');
+      return;
+    }
+    RideTracking.start(sensorMount.value, sensorDebug.checked, calibratedProfile);
     namespace.lastStepCounts = null;
     namespace.lastSensorMount = null;
+    namespace.lastGaitAnalysis = null;
     sensorMount.disabled = true;
     sensorDebug.disabled = true;
+    calibrationToggle.disabled = true;
+    calibrationPanel.classList.add('hidden');
     startBtn.classList.add('hidden');
     stopBtn.classList.remove('hidden');
     diaryCard.classList.add('hidden');
     trackingPanel.classList.remove('hidden');
     sensorBtn.classList.remove('hidden');
+    updateGaitModeStatus();
     setGaitButtonsEnabled(true);
     updateSelectedGait();
     requestWakeLock();
@@ -62,10 +236,12 @@ function setupRidingButtons() {
     namespace.lastElapsedMs = result.elapsedMs;
     namespace.lastStepCounts = result.stepCounts;
     namespace.lastSensorMount = result.sensorMount;
+    namespace.lastGaitAnalysis = result.gaitAnalysis;
     clearInterval(timerInterval);
     releaseWakeLock();
     sensorMount.disabled = false;
     sensorDebug.disabled = false;
+    calibrationToggle.disabled = false;
 
     timerDisplay.innerText = '00:00';
     stopBtn.classList.add('hidden');
@@ -75,6 +251,11 @@ function setupRidingButtons() {
 
     document.getElementById('summaryDuration').innerText = formatTime(result.elapsedMs);
     document.getElementById('stepSummary').textContent = formatStepCounts(result.stepCounts);
+    renderGaitAnalysisSummary(document.getElementById('gaitAnalysisResult'), result.gaitAnalysis);
+    Charts.renderMotionAnalysisChart(
+      document.getElementById('rideMotionAnalysisChart'),
+      result.gaitAnalysis
+    );
     document.getElementById('walkMin').value = minutesToInput(result.durations.walk);
     document.getElementById('trotMin').value = minutesToInput(result.durations.trot);
     document.getElementById('canterMin').value = minutesToInput(result.durations.canter);
@@ -86,6 +267,7 @@ function setupRidingButtons() {
       if (RideTracking.setGait(button.dataset.gait)) {
         updateSelectedGait();
         updateStepCounts();
+        updateGaitModeStatus();
       }
     });
   });
@@ -100,10 +282,13 @@ function setupRidingButtons() {
     sensorDebug.checked = RideTracking.getDebugLogging();
     sensorMount.disabled = true;
     sensorDebug.disabled = true;
+    calibrationToggle.disabled = true;
+    calibrationPanel.classList.add('hidden');
     startBtn.classList.add('hidden');
     stopBtn.classList.remove('hidden');
     trackingPanel.classList.remove('hidden');
     sensorBtn.classList.remove('hidden');
+    updateGaitModeStatus();
     setGaitButtonsEnabled(true);
     updateSelectedGait();
     trackingStatus.textContent = 'Ritt fortgesetzt. Bewegungssensor bei Bedarf erneut verbinden.';
@@ -131,9 +316,12 @@ function setupRidingButtons() {
   function setTrackingStatus(message) {
     trackingStatus.textContent = message;
     updateStepCounts();
+    updateSelectedGait();
     const sensorConnected = message.startsWith('Accelerometer verbunden') ||
       message.startsWith('DeviceMotion verbunden') ||
-      message.startsWith('Bewegung erkannt');
+      message.startsWith('Bewegung erkannt') ||
+      message.startsWith('Automatische Gangartwahl') ||
+      message.startsWith('Gangart automatisch');
     sensorBtn.classList.toggle('hidden', sensorConnected || !RideTracking.isRunning());
   }
 
@@ -151,6 +339,7 @@ function setupRidingButtons() {
     timerInterval = setInterval(() => {
       if (RideTracking.isRunning()) {
         timerDisplay.innerText = formatTime(RideTracking.getElapsedMs());
+        updateGaitAnalysisDisplay();
       }
     }, 1000);
   }
@@ -229,6 +418,7 @@ document.getElementById('saveBtn').addEventListener('click', () => {
     rating: selectedRating,
     stepCounts: namespace.lastStepCounts,
     sensorMount: namespace.lastSensorMount,
+    gaitAnalysis: namespace.lastGaitAnalysis,
     note: note || 'Keine Anmerkungen.'
   };
 
@@ -305,7 +495,17 @@ document.getElementById('askAiBtn').addEventListener('click', async () => {
 // Reit-Analyse-Output: Zusammenfassung der Reitaktivitäten und Bewertung. Keine Berechnungen
 function updateAnalysisView() {
   const history = getStored('equi_history');
+  Charts.renderRideHistoryChart(document.getElementById('rideHistoryChart'), history);
+  renderGaitAnalysisSummary(
+    document.getElementById('motionAnalysisSummary'),
+    history[0]?.gaitAnalysis
+  );
+  Charts.renderMotionAnalysisChart(
+    document.getElementById('motionAnalysisChart'),
+    history[0]?.gaitAnalysis
+  );
   if (!history || history.length === 0) {
+    document.getElementById('latestRating').textContent = '—';
     document.getElementById('noAnalysisMsg').classList.remove('hidden');
     document.getElementById('analysisContent').classList.add('hidden');
     return;
@@ -328,6 +528,18 @@ function updateAnalysisView() {
   document.getElementById('walkBar').style.width = wPct + '%';
   document.getElementById('trotBar').style.width = tPct + '%';
   document.getElementById('canterBar').style.width = cPct + '%';
+  const rating = Number(last.rating);
+  const hasRating = Number.isInteger(rating) && rating >= 1 && rating <= 6;
+  const ratingLabel = hasRating
+    ? rating >= 5
+      ? 'Sehr gut'
+      : rating >= 3
+        ? 'Solide'
+        : 'Ausbaufähig'
+    : 'Keine Bewertung';
+  document.getElementById('latestRating').textContent = hasRating
+    ? `${rating}/6 · ${ratingLabel}`
+    : ratingLabel;
 
   // TODO: Kann man weitere Kommentare erweitern, z.B. basierend auf der Taktbewertung, der Schrittphase oder den Notizen des Reiters.
   let fazit = "";
@@ -337,16 +549,63 @@ function updateAnalysisView() {
     fazit += "✅ <b>Gute Schrittbasis:</b> Ausreichend Aufwärmzeit gewählt.<br><br>";
   }
 
-  // TODO: Die Taktung sollte durch die KI-Analyse (metadata) oder durch die Sensoranalyse (ridetracking) automatisch bewertet werden, anstatt dass der Reiter selbst eine Note vergibt.
-  if (last.rating >= 5) {
-    fazit += "🌟 <b>Sehr hohe Taktreinheit (Note " + last.rating + "/6):</b> Das Taktgefühl war hervorragend.";
-  } else if (last.rating >= 3) {
-    fazit += "⚖️ <b>Solide Grundlage (Note " + last.rating + "/6):</b> Takt stellenweise gut, aber ausbaufähig.";
+  if (!hasRating) {
+    fazit += "Für diesen Ritt wurde keine gültige Takt- und Schwunggefühl-Bewertung gespeichert.";
+  } else if (rating >= 5) {
+    fazit += `🌟 <b>Sehr hohe Taktreinheit (Bewertung ${rating}/6):</b> Das Taktgefühl war hervorragend.`;
+  } else if (rating >= 3) {
+    fazit += `⚖️ <b>Solide Grundlage (Bewertung ${rating}/6):</b> Takt stellenweise gut, aber ausbaufähig.`;
   } else {
-    fazit += "🛠 <b>Fokus Taktstörung (Note " + last.rating + "/6):</b> Achte auf Losgelassenheit im Rücken.";
+    fazit += `🛠 <b>Fokus Taktgefühl (Bewertung ${rating}/6):</b> Achte auf Losgelassenheit im Rücken.`;
   }
 
   document.getElementById('fazitText').innerHTML = fazit;
+}
+
+function renderGaitAnalysisSummary(container, analysis, options = {}) {
+  if (!container) return;
+  container.replaceChildren();
+
+  const labels = { walk: 'Schritt', trot: 'Trab', canter: 'Galopp' };
+  const entries = Object.entries(labels)
+    .map(([gait, label]) => ({ label, stats: analysis?.[gait] }))
+    .filter(({ stats }) => stats && Number.isSafeInteger(stats.windows) && stats.windows > 0);
+
+  if (!entries.length) {
+    const message = options.live
+      ? !options.enabled
+        ? 'Keine bestätigte Kalibrierung: Es werden keine Sensorvergleiche berechnet.'
+        : options.paused
+          ? 'Analyse pausiert. Eine aktive Gangart-Taste setzt sie fort.'
+          : 'Warte auf ausreichend klare Rhythmusfenster für den Kalibrierungsvergleich.'
+      : 'Für diesen Ritt liegen keine auswertbaren kalibrierten Sensorfenster vor.';
+    container.textContent = message;
+    return;
+  }
+
+  entries.forEach(({ label, stats }) => {
+    const item = document.createElement('p');
+    const irregularity = Number.isFinite(stats.irregularityPercent)
+      ? `${stats.irregularityPercent.toFixed(1)}% der Fenster auffällig`
+      : 'keine Rhythmuswerte';
+    const intervalVariation = Number.isFinite(stats.averageIntervalVariationPercent)
+      ? `mittlere Intervallstreuung ${stats.averageIntervalVariationPercent.toFixed(1)}%`
+      : '';
+    const lively = Number.isFinite(stats.livelyPercent)
+      ? `${stats.livelyPercent.toFixed(1)}% der Fenster mit erhöhter Beschleunigungsdynamik`
+      : 'keine Beschleunigungswerte';
+    const ratio = Number.isFinite(stats.averageDynamicsRatio)
+      ? ` (im Mittel ${stats.averageDynamicsRatio.toFixed(2)}× Kalibrierungswert)`
+      : '';
+    item.textContent = `${label}: ${stats.windows} ausgewertete Fenster · ${irregularity}` +
+      `${intervalVariation ? `, ${intervalVariation}` : ''} · ${lively}${ratio}.`;
+    container.appendChild(item);
+  });
+  if (options.live && options.paused) {
+    const paused = document.createElement('p');
+    paused.textContent = 'Analyse pausiert. Eine aktive Gangart-Taste setzt sie fort.';
+    container.appendChild(paused);
+  }
 }
 
 function renderWeekPlan() {
