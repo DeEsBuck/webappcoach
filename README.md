@@ -1,5 +1,7 @@
 ## Kleines Sensor-Testsetup mit Android-Gerät
 
+Die statischen Frontend-Dateien liegen in `dist/`. Lokaler Server und Vercel liefern dieses Verzeichnis als Website-Wurzel aus; API-Funktionen und Server-Skripte bleiben im Projekt-Root.
+
 Dein Device kann die **echten Bewegungssensoren** liefern. Node muss sie nicht simulieren: Der Server stellt nur die App bereit, während Chrome auf dem Device die Sensoren ausliest.
 
 ### 1. Gemini lokal und in einer Preview testen

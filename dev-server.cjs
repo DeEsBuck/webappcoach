@@ -2,8 +2,9 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const root = __dirname;
-const coachHandler = require('./api/coach');
+const projectRoot = __dirname;
+const frontendRoot = path.join(projectRoot, 'dist');
+const coachHandler = require(path.join(projectRoot, 'api', 'coach'));
 const maxRequestSize = 16 * 1024;
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -98,8 +99,8 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname === '/') pathname = '/index.html';
 
-  const filePath = path.resolve(root, `.${pathname}`);
-  const relativePath = path.relative(root, filePath);
+  const filePath = path.resolve(frontendRoot, `.${pathname}`);
+  const relativePath = path.relative(frontendRoot, filePath);
   const pathParts = relativePath.split(path.sep);
   const isAllowedFile = pathParts.length === 1
     ? path.extname(relativePath).toLowerCase() === '.html'
