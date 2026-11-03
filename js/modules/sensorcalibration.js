@@ -8,11 +8,7 @@
   const storageKey = 'equi_sensor_calibration';
   const mounts = ['saddle', 'rider', 'other'];
   const gaits = ['walk', 'trot', 'canter'];
-  const allowedOverlapPercent = {
-    'walk:trot': 30,
-    'trot:canter': 30,
-    'walk:canter': 10
-  };
+  const maxRhythmOverlapPercent = 10;
   const gaitLabels = { walk: 'Schritt', trot: 'Trab', canter: 'Galopp' };
   const captureDurationMs = 10000;
   const maxCapturesPerGait = 3;
@@ -139,11 +135,10 @@
         const firstGait = gaits[first];
         const secondGait = gaits[second];
         const overlapPercent = intervalOverlapPercent(profile[firstGait], profile[secondGait]);
-        const allowedPercent = allowedOverlapPercent[`${firstGait}:${secondGait}`];
-        if (overlapPercent > allowedPercent + 1e-9) {
+        if (overlapPercent > maxRhythmOverlapPercent + 1e-9) {
           return {
             ready: false,
-            reason: `Die Rhythmusbereiche von ${gaitLabels[firstGait]} und ${gaitLabels[secondGait]} überschneiden sich zu ${overlapPercent.toFixed(1)}% (erlaubt: höchstens ${allowedPercent}%). Weitere oder gleichmäßigere Messungen erforderlich.`
+            reason: `Die Rhythmusbereiche von ${gaitLabels[firstGait]} und ${gaitLabels[secondGait]} überschneiden sich zu ${overlapPercent.toFixed(1)}% (erlaubt: höchstens ${maxRhythmOverlapPercent}%).`
           };
         }
       }
