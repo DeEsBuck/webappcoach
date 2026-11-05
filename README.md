@@ -6,23 +6,24 @@ Dein Device kann die **echten Bewegungssensoren** liefern. Node muss sie nicht s
 
 ### 1. Gemini lokal und in einer Preview testen
 
-Der lokale Entwicklungsserver verwendet dieselbe Gemini-Funktion wie das Deployment unter `/api/coach`; er gibt keine Mock-Antwort zurück.
+Der lokale Entwicklungsserver verwendet dieselben KI-Funktionen wie das Deployment unter `/api/coach`; er gibt keine Mock-Antwort zurück. Der KI-Reitcoach Assistent nutzt Gemini mit transparentem OpenRouter-Fallback. Der Profi-Modus nutzt OpenRouter oder optional Ollama lokal.
 
-1. Verwende Node.js 20.6 oder neuer. Erstelle eine lokale Env-Datei und trage dort deinen Gemini-Schlüssel ein:
+1. Verwende Node.js 20.6 oder neuer. Erstelle eine lokale Env-Datei und trage dort den Gemini-Schlüssel und den OpenRouter-Schlüssel für den Fallback ein:
 
    ```text
    GEMINI_API_KEY=dein-Gemini-API-Schlüssel
+   OPENROUTER_API_KEY=dein-OpenRouter-API-Schlüssel
    ```
 
-   Du kannst `.env.example` nach `.env.local` kopieren. `.env.local` ist in Git ignoriert. Den Schlüssel niemals in Frontend-Dateien oder ein Commit schreiben.
+   Du kannst `.env.example` nach `.env.local` kopieren. `.env.local` ist in Git ignoriert. Der KI-Reitcoach Assistent versucht zuerst Gemini und wechselt bei einem API-Fehler automatisch zu OpenRouter Auto (`openrouter/auto`) mit den in `api/coach.js` konfigurierten Modellen. Frage, System-Prompt und validierter Trainingskontext werden beim Wechsel unverändert erneut gesendet. Für den Profi-Modus kann OpenRouter Auto direkt genutzt werden. Der Schlüssel bleibt serverseitig und darf niemals in Frontend-Dateien oder ein Commit geschrieben werden.
 2. Für Tests am PC ohne Android-Gerät starte den Server und lass das Terminal geöffnet:
 
    ```powershell
    npm.cmd run dev
    ```
 
-   Öffne danach `http://localhost:3000/appcoach.html`. Fragen werden an Gemini gesendet und können API-Kontingent verbrauchen.
-3. Für eine Vercel-Preview den Schlüssel in **Project Settings → Environment Variables** mit dem Namen `GEMINI_API_KEY` und dem Environment **Preview** hinterlegen. Wenn nur der Branch `features` den Schlüssel erhalten soll, die Preview-Branch-Einschränkung auf `features` setzen. Danach eine neue Preview-Deployment erstellen; bereits laufende Deployments übernehmen neue Variablen nicht. Schütze die Preview-URL mit Vercel Deployment Protection, damit Dritte den Gemini-Endpunkt nicht auf deine Kosten verwenden können.
+   Öffne danach `http://localhost:3000/appcoach.html`. Fragen werden an Gemini gesendet und können API-Kontingent verbrauchen; bei einem Gemini-Fehler wird OpenRouter verwendet.
+3. Für eine Vercel-Preview die Schlüssel in **Project Settings → Environment Variables** mit den Namen `GEMINI_API_KEY` und `OPENROUTER_API_KEY` und dem Environment **Preview** hinterlegen. Wenn nur der Branch `features` die Schlüssel erhalten soll, die Preview-Branch-Einschränkung auf `features` setzen. Danach eine neue Preview-Deployment erstellen; bereits laufende Deployments übernehmen neue Variablen nicht. Schütze die Preview-URL mit Vercel Deployment Protection, damit Dritte die KI-Endpunkte nicht auf deine Kosten verwenden können.
 
 Prüfe den lokalen Server bei Bedarf in einem zweiten PowerShell-Fenster:
 

@@ -21,16 +21,23 @@
     </div>
 
     <section class="local-model-settings" aria-labelledby="modelSettingsTitle">
-      <h2 id="modelSettingsTitle">Lokale Modelle</h2>
-      <p id="modelStatus" class="model-status" role="status" aria-live="polite">Verbinde mit Ollama auf diesem Gerät …</p>
-      <fieldset id="modelSettings" disabled>
-        <label for="fastModel">Modell für kurze Fragen</label>
-        <select id="fastModel"></select>
-        <label for="advancedModel">Modell für komplexe Anfragen</label>
-        <select id="advancedModel"></select>
-      </fieldset>
-      <button type="button" id="refreshModelsBtn" class="refresh-models-btn">Ollama-Modelle neu laden</button>
-      <small class="ai-endpoint-note">Fragen, Trainingsdaten und die letzte Einstiegsanalyse werden direkt an Ollama auf diesem Gerät gesendet, nicht an Vercel oder Google. Für die Verbindung muss Ollama diese Website in OLLAMA_ORIGINS erlauben.</small>
+      <h2 id="modelSettingsTitle">KI-Dienst</h2>
+      <label for="aiProvider">Dienst für den Profi-Modus</label>
+      <select id="aiProvider">
+        <option value="openrouter">OpenRouter Auto mit Fallback-Modellen</option>
+        <option value="ollama">Ollama auf diesem Gerät</option>
+      </select>
+      <p id="modelStatus" class="model-status" role="status" aria-live="polite">OpenRouter Auto ausgewählt.</p>
+      <div id="localModelControls" hidden>
+        <fieldset id="modelSettings" disabled>
+          <label for="fastModel">Modell für kurze Fragen</label>
+          <select id="fastModel"></select>
+          <label for="advancedModel">Modell für komplexe Anfragen</label>
+          <select id="advancedModel"></select>
+        </fieldset>
+        <button type="button" id="refreshModelsBtn" class="refresh-models-btn">Ollama-Modelle neu laden</button>
+      </div>
+      <small id="providerNote" class="ai-endpoint-note">OpenRouter wählt mit openrouter/auto ein passendes Modell aus der serverseitig festgelegten Fallback-Liste. Fragen und Trainingsdaten werden an OpenRouter über den Server gesendet.</small>
     </section>
   </main>
 

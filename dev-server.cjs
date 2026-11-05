@@ -15,6 +15,7 @@ const mimeTypes = {
   '.svg': 'image/svg+xml'
 };
 
+
 function sendJson(res, status, data) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(data));
@@ -63,12 +64,6 @@ const server = http.createServer(async (req, res) => {
     try {
       if (req.method !== 'POST') {
         return await coachHandler(req, createFunctionResponse(res));
-      }
-
-      if (!process.env.GEMINI_API_KEY) {
-        return sendJson(res, 500, {
-          error: 'GEMINI_API_KEY fehlt. Lege den Schlüssel in .env.local ab und starte den Dev-Server neu.'
-        });
       }
 
       req.body = await readJson(req);
