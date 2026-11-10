@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/microfrontends.json",
+  "applications": {
+    "webappcoach": {
+      "development": {
+        "fallback": "webappcoach.vercel.app"
+      }
+    }
+  }
+}
