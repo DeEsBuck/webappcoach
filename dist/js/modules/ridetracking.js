@@ -37,7 +37,7 @@ window.EquiCoach.RideTracking = (() => {
     if (session) localStorage.setItem(storageKey, JSON.stringify(session));
   }
 
-  function start(sensorMount, debugLogging, calibratedProfile = null) {
+  function start(sensorMount, calibratedProfile = null) {
     const now = Date.now();
     const selectedMount = sensorProfiles[sensorMount] ? sensorMount : 'saddle';
     const autoGaitProfile = normalizeProfile(calibratedProfile);
@@ -49,7 +49,6 @@ window.EquiCoach.RideTracking = (() => {
       stepCounts: { walk: 0, trot: 0, canter: 0, pause: 0 },
       gaitAnalysis: emptyGaitAnalysis(),
       sensorMount: selectedMount,
-      debugLogging: debugLogging === true,
       autoGaitProfile,
       autoGaitPaused: false
     };
@@ -58,8 +57,7 @@ window.EquiCoach.RideTracking = (() => {
     persist();
     console.info('[EquiCoach Sensor] Ritt gestartet', {
       sensorMount: sensorProfiles[selectedMount].label,
-      stepThresholdMps2: sensorProfiles[selectedMount].threshold,
-      debugLogging: session.debugLogging
+      stepThresholdMps2: sensorProfiles[selectedMount].threshold
     });
   }
 
@@ -106,7 +104,6 @@ window.EquiCoach.RideTracking = (() => {
       }, {}),
       gaitAnalysis: normalizeGaitAnalysis(restored.gaitAnalysis),
       sensorMount: sensorProfiles[restored.sensorMount] ? restored.sensorMount : 'saddle',
-      debugLogging: restored.debugLogging === true,
       autoGaitProfile: normalizeProfile(restored.autoGaitProfile),
       autoGaitPaused: restored.autoGaitPaused === true
     };
@@ -333,14 +330,6 @@ window.EquiCoach.RideTracking = (() => {
     const labels = { walk: 'Schritt', trot: 'Trab', canter: 'Galopp' };
     const message = `Gangart automatisch auf ${labels[classification.gait]} gestellt · Rhythmus ${classification.bpm}/min.`;
     onStatus(message);
-    if (session.debugLogging) {
-      console.info('[EquiCoach Sensor] Kalibrierte Gangart erkannt', {
-        gait: classification.gait,
-        bpm: classification.bpm,
-        confidence: classification.confidence,
-        sensorMount: sensorProfiles[session.sensorMount].label
-      });
-    }
   }
 
   function updateMovement(acceleration, includesGravity, onStatus, source, sampleTimestamp) {
@@ -393,26 +382,7 @@ window.EquiCoach.RideTracking = (() => {
       onStatus(sensorMessage());
     }
 
-    if (session.debugLogging) {
-      console.debug('[EquiCoach Sensor] Messwert', {
-        source,
-        sampleTimestamp,
-        sensorMount: profile.label,
-        gait: session.currentGait,
-        acceleration: {
-          x: acceleration.x,
-          y: acceleration.y,
-          z: acceleration.z
-        },
-        includesGravity,
-        magnitudeMps2: Number(magnitude.toFixed(3)),
-        movementSignalMps2: Number(signal.toFixed(3)),
-        thresholdMps2: threshold,
-        moving,
-        stepDetected,
-        stepCounts: { ...session.stepCounts }
-      });
-    } else if (stepDetected) {
+    if (stepDetected) {
       console.info('[EquiCoach Sensor] Schrittimpuls erkannt', {
         gait: session.currentGait,
         count: session.stepCounts[session.currentGait],
@@ -548,7 +518,6 @@ window.EquiCoach.RideTracking = (() => {
     getGaitAnalysisSummary: () => session ? summarizeGaitAnalysis(session.gaitAnalysis) : null,
     isAutoGaitEnabled: () => Boolean(session?.autoGaitProfile),
     isAutoGaitPaused: () => Boolean(session?.autoGaitPaused),
-    getSensorMount: () => session && session.sensorMount,
-    getDebugLogging: () => session && session.debugLogging
+    getSensorMount: () => session && session.sensorMount
   };
 })();

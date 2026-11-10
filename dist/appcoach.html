@@ -35,9 +35,10 @@
         <button type="button" id="calibrationToggle" class="sensor-btn">Sensordaten vor dem ersten Ritt kalibrieren</button>
         <div id="calibrationPanel" class="calibration-panel hidden">
           <p class="sensor-note">
-            Erfasse für die gewählte Sensorposition je Gangart bis zu drei Messungen à 10 Sekunden.
+            Erfasse für die gewählte Sensorposition je Gangart eine zusammenhängende Messung von 100 Sekunden.
             Wähle die Gangart, die während der Aufnahme tatsächlich geritten wird. Rohdaten und Analyse
             bleiben ausschließlich lokal in diesem Browser und werden nicht an den KI-Coach gesendet.
+            Nach jeder Aufnahme werden die Rohdaten zusätzlich als CSV in der Browserkonsole ausgegeben.
             Die Messungen dienen nach der Bestätigung als Rhythmus- und Beschleunigungsreferenz.
             Bedien das Gerät nicht, während du reitest.
           </p>
@@ -49,7 +50,7 @@
               <option value="canter">Galopp</option>
             </select>
           </div>
-          <button type="button" id="captureCalibrationBtn" class="btn btn-save">10-Sekunden-Messung aufnehmen</button>
+          <button type="button" id="captureCalibrationBtn" class="btn btn-save">100-Sekunden-Messung aufnehmen</button>
           <button type="button" id="cancelCalibrationBtn" class="sensor-btn hidden">Aufnahme abbrechen</button>
           <progress id="calibrationProgress" class="calibration-progress hidden" max="100" value="0"></progress>
           <p id="calibrationStatus" class="tracking-status" role="status" aria-live="polite"></p>
@@ -59,10 +60,6 @@
           </button>
           <button type="button" id="clearCalibrationBtn" class="sensor-btn">Kalibrierung dieser Sensorposition löschen</button>
         </div>
-        <label class="sensor-debug-option">
-          <input type="checkbox" id="sensorDebug">
-          Sensordaten in Chrome DevTools protokollieren
-        </label>
         <button id="startBtn" class="btn btn-start">Ritt starten</button>
         <button id="stopBtn" class="btn btn-stop hidden">Ritt beenden</button>
         <div id="trackingPanel" class="tracking-panel hidden">

@@ -38,7 +38,6 @@ function setupRidingButtons() {
   const trackingStatus = document.getElementById('trackingStatus');
   const sensorBtn = document.getElementById('sensorBtn');
   const sensorMount = document.getElementById('sensorMount');
-  const sensorDebug = document.getElementById('sensorDebug');
   const calibrationToggle = document.getElementById('calibrationToggle');
   const calibrationPanel = document.getElementById('calibrationPanel');
   const calibrationGait = document.getElementById('calibrationGait');
@@ -67,7 +66,7 @@ function setupRidingButtons() {
     setCalibrationControls(true);
     calibrationProgress.value = 0;
     calibrationProgress.classList.remove('hidden');
-    calibrationStatus.textContent = 'Sensor wird verbunden. Halte die gewählte Gangart während der Aufnahme möglichst gleichmäßig.';
+    calibrationStatus.textContent = 'Sensor wird verbunden. Halte die gewählte Gangart während der 100-Sekunden-Aufnahme möglichst gleichmäßig.';
 
     try {
       const result = await SensorCalibration.capture(
@@ -77,9 +76,9 @@ function setupRidingButtons() {
       );
       const gait = gaitLabels[calibrationGait.value];
       const bpm = result.capture.analysis.bpm;
-      calibrationStatus.textContent = `${gait}-Messung lokal gespeichert (${result.capture.sampleCount} Messwerte` +
+      calibrationStatus.textContent = `${gait}-Messung lokal gespeichert (${result.capture.sampleCount} Messwerte, einmalig 100 Sekunden` +
         `${bpm ? `, Analyzer-Rhythmus ${bpm}/min` : ', noch kein klarer Rhythmus erkannt'}` +
-        `${result.replacedOldest ? ', älteste Messung ersetzt' : ''}).`;
+        `${result.replacedOldest ? ', vorherige Messung ersetzt' : ''}). CSV-Rohdaten stehen in der Browserkonsole.`;
       renderCalibrationResults();
     } catch (error) {
       calibrationStatus.textContent = error.name === 'AbortError'
@@ -154,7 +153,7 @@ function setupRidingButtons() {
         const row = document.createElement('div');
         row.className = 'calibration-result';
         const heading = document.createElement('strong');
-        heading.textContent = `${label}: ${captures.length}/${SensorCalibration.maxCapturesPerGait} Messungen`;
+        heading.textContent = `${label}: ${captures.length}/${SensorCalibration.maxCapturesPerGait} Messung`;
         row.appendChild(heading);
         captures.forEach((capture, index) => {
           const detail = document.createElement('div');
@@ -166,7 +165,7 @@ function setupRidingButtons() {
           const signalDeviation = Number.isFinite(analysis.signalDeviation)
             ? ` · Beschleunigungsstreuung ${analysis.signalDeviation.toFixed(2)} m/s²`
             : '';
-          detail.textContent = `Messung ${index + 1}: ${analysis.bpm || '—'} Impulse/min · Analyzer: ${analysis.label} (${agreement})${intervalVariation}${signalDeviation} · ${capture.sampleCount} Werte`;
+          detail.textContent = `${analysis.bpm || '—'} Impulse/min · Analyzer: ${analysis.label} (${agreement})${intervalVariation}${signalDeviation} · ${capture.sampleCount} Werte`;
           row.appendChild(detail);
         });
         calibrationResults.appendChild(row);
@@ -207,12 +206,11 @@ function setupRidingButtons() {
       calibrationPanel.classList.remove('hidden');
       return;
     }
-    RideTracking.start(sensorMount.value, sensorDebug.checked, calibratedProfile);
+    RideTracking.start(sensorMount.value, calibratedProfile);
     namespace.lastStepCounts = null;
     namespace.lastSensorMount = null;
     namespace.lastGaitAnalysis = null;
     sensorMount.disabled = true;
-    sensorDebug.disabled = true;
     calibrationToggle.disabled = true;
     calibrationPanel.classList.add('hidden');
     startBtn.classList.add('hidden');
@@ -240,7 +238,6 @@ function setupRidingButtons() {
     clearInterval(timerInterval);
     releaseWakeLock();
     sensorMount.disabled = false;
-    sensorDebug.disabled = false;
     calibrationToggle.disabled = false;
 
     timerDisplay.innerText = '00:00';
@@ -279,9 +276,7 @@ function setupRidingButtons() {
 
   if (RideTracking.restore()) {
     sensorMount.value = RideTracking.getSensorMount();
-    sensorDebug.checked = RideTracking.getDebugLogging();
     sensorMount.disabled = true;
-    sensorDebug.disabled = true;
     calibrationToggle.disabled = true;
     calibrationPanel.classList.add('hidden');
     startBtn.classList.add('hidden');

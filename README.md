@@ -22,7 +22,7 @@ Der lokale Entwicklungsserver verwendet dieselben KI-Funktionen wie das Deployme
    npm.cmd run dev
    ```
 
-   Öffne danach `http://localhost:3000/appcoach.html`. Fragen werden an Gemini gesendet und können API-Kontingent verbrauchen; bei einem Gemini-Fehler wird OpenRouter verwendet.
+   Öffne danach `http://localhost:3000/appcoach.html`. Fragen werden an Gemini gesendet und können API-Kontingent verbrauchen; bei einem Gemini-Fehler wird OpenRouter verwendet. Für den Android-Test weiter unten darf dieser Server nicht parallel laufen, da `launch.js` selbst den Server auf Port 3000 startet.
 3. Für eine Vercel-Preview die Schlüssel in **Project Settings → Environment Variables** mit den Namen `GEMINI_API_KEY` und `OPENROUTER_API_KEY` und dem Environment **Preview** hinterlegen. Wenn nur der Branch `features` die Schlüssel erhalten soll, die Preview-Branch-Einschränkung auf `features` setzen. Danach eine neue Preview-Deployment erstellen; bereits laufende Deployments übernehmen neue Variablen nicht. Schütze die Preview-URL mit Vercel Deployment Protection, damit Dritte die KI-Endpunkte nicht auf deine Kosten verwenden können.
 
 Prüfe den lokalen Server bei Bedarf in einem zweiten PowerShell-Fenster:
@@ -32,6 +32,8 @@ curl.exe -I http://127.0.0.1:3000/appcoach.html
 ```
 
 Erwartet wird `HTTP/1.1 200 OK`.
+
+---
 
 ### 2. Hardware-Device verbinden
 
@@ -78,53 +80,7 @@ Bei mehreren ADB-Geräten fragt das Skript nach der Auswahl. Alternativ kannst d
 node launch.js "IP-ADRESSE:ADB-PORT"
 ```
 
-Das Skript startet den lokalen Server und richtet zwei Verbindungen ein: `adb reverse` macht den Server auf dem Device unter `localhost:3000` erreichbar; `adb forward` stellt die Chrome-DevTools-Schnittstelle für VS Code unter `localhost:9222` bereit. Port 3000 muss frei sein; falls dort bereits ein Server läuft, bricht das Skript ab, bevor es ADB-Weiterleitungen ändert. Mit **Ctrl+C** werden Server und beide ADB-Weiterleitungen beendet.
-
-### 4. App öffnen und mit vscode-js-debug verbinden
-
-Öffne **Chrome auf dem Device** und gehe zu:
-
-```text
-http://localhost:3000/appcoach.html
-```
-
-`localhost` ist wichtig, damit der Browser den Ursprung als sicheren Kontext behandelt. Öffne in VS Code **Run and Debug**, wähle **Attach to Android Chrome (js-debug)** und starte mit **F5**. Die Konfiguration verwendet den in `launch.js` eingerichteten Debug-Port 9222; Breakpoints greifen in die Dateien dieses Workspaces.
-
-### 5. Sensor vor dem ersten Ritt kalibrieren
-
-1. Wähle **Sensor befestigt an** und befestige das Device für alle Vergleichsmessungen an derselben Stelle.
-2. Öffne **Sensordaten vor dem ersten Ritt kalibrieren** und wähle die Gangart, die während der Messung tatsächlich geritten wird.
-3. Nimm für Schritt, Trab und Galopp jeweils bis zu drei separate 10-Sekunden-Messungen auf. Die App zeigt pro Aufnahme die lokale Rhythmus-Schätzung und die ausgewählte Gangart zum Vergleich. Bei drei vorhandenen Aufnahmen ersetzt eine neue die älteste für diese Gangart und Sensorposition.
-4. Wiederhole die Messungen bei einer anderen Befestigungsposition separat über die Auswahl **Sensor befestigt an**. Die Daten bleiben im lokalen Browserprofil und können für die ausgewählte Position gelöscht werden.
-
-Starte die Aufnahme erst, wenn die Gangart sicher und gleichmäßig ausgeführt wird. Bediene das Device nicht während des Reitens; lasse es fest befestigt und eine andere Person die Aufnahme steuern. Die Rhythmus-/Gangart-Ausgabe ist experimentell und keine validierte Erkennung. Es werden keine Rohdaten oder Kalibrierungsdaten an den KI-Coach gesendet.
-
-### 6. Bewegung testen
-
-1. Tippe auf **Ritt starten**.
-2. Erlaube den Sensorzugriff, falls Chrome danach fragt.
-3. Bewege das Device vorsichtig und beobachte den Status im Tracking-Bereich.
-4. Tippe auf **Ritt beenden**.
-
-Nach mindestens zwei verwertbaren Messungen für jede Gangart kannst du die Kalibrierung ausdrücklich bestätigen. Nur dann wird bei einem Ritt mit derselben Sensorposition die automatische Gangartwahl aktiviert. Sie wechselt erst nach drei aufeinanderfolgenden stabilen Rhythmusschätzungen; bei unsicheren Signalen bleibt die aktuelle Auswahl bestehen. **Pause** bleibt manuell und setzt die automatische Wahl aus, bis du wieder eine aktive Gangart auswählst.
-
-Zur Bestätigung darf sich jedes Paar der Rhythmusbereiche höchstens um 10% überschneiden. Der Überlappungsgrad wird als Schnittmenge geteilt durch Vereinigungsbereich der BPM-Intervalle (IoU) berechnet; genau 10% ist zulässig.
-
-Mit der bestätigten Kalibrierung vergleicht die lokale Analyse die Streuung der Bewegungsintervalle und die Beschleunigungsdynamik erkannter Rhythmusfenster mit den Referenzmessungen derselben Gangart. Ein Fenster gilt als auffällig, wenn die Intervallstreuung über dem Kalibrierungsmedian um mindestens 8 Prozentpunkte oder 50 Prozent des Basiswerts liegt. Beschleunigungsdynamik ab dem 1,25-Fachen der Referenz wird als möglicher Schwunghinweis dargestellt. Das sind experimentelle, positionsabhängige Sensorindikatoren und keine validierte Bewertung von Takt oder Schwung. Es werden nur zusammengefasste Kennwerte pro Gangart gespeichert, keine Ritt-Rohmessungen.
-
-Ein begrenzter Ringpuffer mit den jüngsten Rohmesswerten bleibt im Arbeitsspeicher des Browsers und wird weder dauerhaft gespeichert noch an den KI-Coach übertragen. Die Sensorwerte liefern weiterhin heuristisch erkannte Schrittimpulse, keine validierte Pferdeschrittzählung.
-
-Im Tab **Analyse** werden die Bewertungen für Takt- und Schwunggefühl der letzten Ritte gemeinsam mit den erfassten Gangartenanteilen visualisiert. Die Bewertung ist eine Selbsteinschätzung; die Grafik zeigt keinen ursächlichen Zusammenhang zwischen Bewertung und Gangartenverteilung.
-
-### 7. Optional: Browser-Konsole am PC ansehen
-
-Für die Fehlersuche verbinde das Device per USB und öffne am PC Chrome:
-
-```text
-chrome://inspect/#devices
-```
-
-Aktiviere die USB-Geräteerkennung und klicke beim geöffneten Device-Tab auf **Inspect**. Dort siehst du JavaScript-Fehler und `console`-Meldungen.
+Beende zuerst einen eventuell laufenden `npm.cmd run dev`-Server mit **Ctrl+C**. Starte für den Android-Test nur `launch.js` – es startet den lokalen Server selbst und richtet zwei Verbindungen ein: `adb reverse` macht den Server auf dem Device unter `localhost:3000` erreichbar; `adb forward` stellt die Chrome-DevTools-Schnittstelle für VS Code unter `localhost:9222` bereit. Port 3000 muss frei sein; falls dort bereits ein Server läuft, bricht das Skript ab, bevor es ADB-Weiterleitungen ändert. Mit **Ctrl+C** werden Server und beide ADB-Weiterleitungen beendet.
 
 ### Wenn es nicht klappt
 
@@ -138,6 +94,54 @@ Aktiviere die USB-Geräteerkennung und klicke beim geöffneten Device-Tab auf **
   adb -s "GERÄTE-ID" forward --remove tcp:9222
   adb -s "GERÄTE-ID" reverse --remove tcp:3000
   ```
+
+### 4. App öffnen und mit vscode-js-debug verbinden
+
+Öffne **Chrome auf dem Device** und gehe zu:
+
+```text
+http://localhost:3000/appcoach.html
+```
+
+`localhost` ist wichtig, damit der Browser den Ursprung als sicheren Kontext behandelt. Öffne in VS Code **Run and Debug**, wähle **Attach to Android Chrome (js-debug)** und starte mit **F5**. Die Konfiguration verwendet den in `launch.js` eingerichteten Debug-Port 9222; Breakpoints greifen in die Dateien dieses Workspaces.
+
+### Optional: Browser-Konsole am PC ansehen
+
+Für die Fehlersuche verbinde das Device per USB und öffne am PC Chrome:
+
+```text
+chrome://inspect/#devices
+```
+
+Aktiviere die USB-Geräteerkennung und klicke beim geöffneten Device-Tab auf **Inspect**. Dort siehst du JavaScript-Fehler und `console`-Meldungen.
+
+
+### 5. Sensor vor dem ersten Ritt kalibrieren
+
+1. Wähle **Sensor befestigt an** und befestige das Device für alle Vergleichsmessungen an derselben Stelle.
+2. Öffne **Sensordaten vor dem ersten Ritt kalibrieren** und wähle die Gangart, die während der Messung tatsächlich geritten wird.
+3. Nimm für Schritt, Trab und Galopp jeweils eine zusammenhängende 100-Sekunden-Messung auf. Die App zeigt pro Aufnahme die lokale Rhythmus-Schätzung und die ausgewählte Gangart zum Vergleich. Frühere Messungen derselben Gangart und Sensorposition werden ersetzt. Die Rohwerte jeder Aufnahme erscheinen als CSV-Text in der Browserkonsole und können dort kopiert werden.
+4. Wiederhole die Messungen bei einer anderen Befestigungsposition separat über die Auswahl **Sensor befestigt an**. Die Daten bleiben im lokalen Browserprofil und können für die ausgewählte Position gelöscht werden.
+
+Starte die Aufnahme erst, wenn die Gangart sicher und gleichmäßig ausgeführt wird. Bediene das Device nicht während des Reitens; lasse es fest befestigt und eine andere Person die Aufnahme steuern. Die Rhythmus-/Gangart-Ausgabe ist experimentell und keine validierte Erkennung. Es werden keine Rohdaten oder Kalibrierungsdaten an den KI-Coach gesendet.
+
+### 6. Bewegung testen
+
+1. Tippe auf **Ritt starten**.
+2. Erlaube den Sensorzugriff, falls Chrome danach fragt.
+3. Bewege das Device vorsichtig und beobachte den Status im Tracking-Bereich.
+4. Tippe auf **Ritt beenden**.
+
+Nach einer mindestens 90 Sekunden langen, verwertbaren Messung für jede Gangart kannst du die Kalibrierung ausdrücklich bestätigen. Nur dann wird bei einem Ritt mit derselben Sensorposition die automatische Gangartwahl aktiviert. Sie wechselt erst nach drei aufeinanderfolgenden stabilen Rhythmusschätzungen; bei unsicheren Signalen bleibt die aktuelle Auswahl bestehen. **Pause** bleibt manuell und setzt die automatische Wahl aus, bis du wieder eine aktive Gangart auswählst.
+
+Zur Bestätigung darf sich jedes Paar der Rhythmusbereiche höchstens um 25% überschneiden. Der Überlappungsgrad wird als Schnittmenge geteilt durch Vereinigungsbereich der BPM-Intervalle (IoU) berechnet; genau 25% ist zulässig.
+
+Mit der bestätigten Kalibrierung vergleicht die lokale Analyse die Streuung der Bewegungsintervalle und die Beschleunigungsdynamik erkannter Rhythmusfenster mit den Referenzmessungen derselben Gangart. Ein Fenster gilt als auffällig, wenn die Intervallstreuung über dem Kalibrierungsmedian um mindestens 8 Prozentpunkte oder 50 Prozent des Basiswerts liegt. Beschleunigungsdynamik ab dem 1,25-Fachen der Referenz wird als möglicher Schwunghinweis dargestellt. Das sind experimentelle, positionsabhängige Sensorindikatoren und keine validierte Bewertung von Takt oder Schwung. Es werden nur zusammengefasste Kennwerte pro Gangart gespeichert, keine Ritt-Rohmessungen. Die Kennwerte werden in getrennten Liniendiagrammen für Rhythmusauffälligkeiten und Beschleunigungsdynamik dargestellt.
+
+Ein begrenzter Ringpuffer mit den jüngsten Rohmesswerten bleibt im Arbeitsspeicher des Browsers und wird weder dauerhaft gespeichert noch an den KI-Coach übertragen. Die Sensorwerte liefern weiterhin heuristisch erkannte Schrittimpulse, keine validierte Pferdeschrittzählung.
+
+Im Tab **Analyse** werden die Bewertungen für Takt- und Schwunggefühl der letzten Ritte gemeinsam mit den erfassten Gangartenanteilen visualisiert. Die Bewertung ist eine Selbsteinschätzung; die Grafik zeigt keinen ursächlichen Zusammenhang zwischen Bewertung und Gangartenverteilung.
+
 
 ### Daten für den KI-Coach in `appcoach.html`
 
