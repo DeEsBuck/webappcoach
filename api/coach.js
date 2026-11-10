@@ -1,11 +1,5 @@
 const { GoogleGenAI } = require('@google/genai');
 
-const OPENROUTER_FALLBACK_MODELS = [
-  'nvidia/nemotron-3.5-super-vl:free',
-  'nvidia/nemotron-3.5-lightning:free',
-  'google/gemini-3.8-flash',
-  'openai/gpt-6-luna:batch'
-];
 const ASSISTANT_SYSTEM_PROMPT = `Du bist ein hilfreicher und fachkundiger Reitcoach für die klassische Ausbildungsskala.
 Beschränke dich auf Takt, Losgelassenheit und Anlehnung. Gib verständliche, pferdegerechte und praxisnahe Hinweise sowie konkrete Übungen in klaren Schritten.
 Stelle keine medizinischen Diagnosen. Weise bei anhaltenden Schmerzen, deutlicher Lahmheit oder wiederkehrendem Widersetzungsverhalten darauf hin, Training zu unterbrechen und eine Tierärztin oder einen Tierarzt hinzuzuziehen.
@@ -25,10 +19,6 @@ async function generateOpenRouterAnswer(apiKey, systemPrompt, userContent, maxTo
     },
     body: JSON.stringify({
       model: 'openrouter/auto',
-      plugins: [{
-        id: 'auto-router',
-        allowed_models: OPENROUTER_FALLBACK_MODELS
-      }],
       max_tokens: maxTokens,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -322,7 +312,6 @@ module.exports = async function handler(req, res) {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: 'gemini-flash-latest',
-      cachedContent: '',
       contents: [{ role: 'user', parts: [{ text: userContent }] }],
       config: {
         systemInstruction: {

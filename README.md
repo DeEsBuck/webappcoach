@@ -15,7 +15,7 @@ Der lokale Entwicklungsserver verwendet dieselben KI-Funktionen wie das Deployme
    OPENROUTER_API_KEY=dein-OpenRouter-API-Schlüssel
    ```
 
-   Du kannst `.env.example` nach `.env.local` kopieren. `.env.local` ist in Git ignoriert. Der KI-Reitcoach Assistent versucht zuerst Gemini und wechselt bei einem API-Fehler automatisch zu OpenRouter Auto (`openrouter/auto`) mit den in `api/coach.js` konfigurierten Modellen. Frage, System-Prompt und validierter Trainingskontext werden beim Wechsel unverändert erneut gesendet. Für den Profi-Modus kann OpenRouter Auto direkt genutzt werden. Der Schlüssel bleibt serverseitig und darf niemals in Frontend-Dateien oder ein Commit geschrieben werden.
+   Du kannst `.env.example` nach `.env.local` kopieren. `.env.local` ist in Git ignoriert. Der KI-Reitcoach Assistent versucht zuerst Gemini und wechselt bei einem API-Fehler automatisch zu OpenRouter Auto (`openrouter/auto`). Frage, System-Prompt und validierter Trainingskontext werden beim Wechsel unverändert erneut gesendet. Für den Profi-Modus kann OpenRouter Auto direkt genutzt werden. Der Schlüssel bleibt serverseitig und darf niemals in Frontend-Dateien oder ein Commit geschrieben werden.
 2. Für Tests am PC ohne Android-Gerät starte den Server und lass das Terminal geöffnet:
 
    ```powershell

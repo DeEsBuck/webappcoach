@@ -103,8 +103,8 @@ function updateProvider() {
   }
 
   modelSettings.disabled = true;
-  modelStatus.textContent = 'OpenRouter Auto ausgewählt; die Fallback-Modelle sind serverseitig konfiguriert.';
-  providerNote.textContent = 'OpenRouter wählt mit openrouter/auto ein passendes Modell aus der serverseitig festgelegten Fallback-Liste. Fragen und Trainingsdaten werden an OpenRouter über den Server gesendet.';
+  modelStatus.textContent = 'OpenRouter Auto ausgewählt.';
+  providerNote.textContent = 'OpenRouter wählt mit openrouter/auto ein passendes Modell aus. Fragen und Trainingsdaten werden an OpenRouter über den Server gesendet.';
   sendBtn.disabled = false;
 }
 
