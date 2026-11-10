@@ -18,7 +18,7 @@
             "address": "127.0.0.1",
             "port": 9222,
             "url": "http://localhost:3000/appcoach.html",
-            "webRoot": "${workspaceFolder}"
+            "webRoot": "${workspaceFolder}/dist"
         }
 
     ]

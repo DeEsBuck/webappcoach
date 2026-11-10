@@ -1,5 +1,7 @@
 ## Kleines Sensor-Testsetup mit Android-Gerät
 
+Die statischen Frontend-Dateien liegen in `dist/`. Lokaler Server und Vercel liefern dieses Verzeichnis als Website-Wurzel aus; API-Funktionen und Server-Skripte bleiben im Projekt-Root.
+
 Dein Device kann die **echten Bewegungssensoren** liefern. Node muss sie nicht simulieren: Der Server stellt nur die App bereit, während Chrome auf dem Device die Sensoren ausliest.
 
 ### 1. Gemini lokal und in einer Preview testen
@@ -87,16 +89,33 @@ http://localhost:3000/appcoach.html
 
 `localhost` ist wichtig, damit der Browser den Ursprung als sicheren Kontext behandelt. Öffne in VS Code **Run and Debug**, wähle **Attach to Android Chrome (js-debug)** und starte mit **F5**. Die Konfiguration verwendet den in `launch.js` eingerichteten Debug-Port 9222; Breakpoints greifen in die Dateien dieses Workspaces.
 
-### 5. Bewegung testen
+### 5. Sensor vor dem ersten Ritt kalibrieren
+
+1. Wähle **Sensor befestigt an** und befestige das Device für alle Vergleichsmessungen an derselben Stelle.
+2. Öffne **Sensordaten vor dem ersten Ritt kalibrieren** und wähle die Gangart, die während der Messung tatsächlich geritten wird.
+3. Nimm für Schritt, Trab und Galopp jeweils bis zu drei separate 10-Sekunden-Messungen auf. Die App zeigt pro Aufnahme die lokale Rhythmus-Schätzung und die ausgewählte Gangart zum Vergleich. Bei drei vorhandenen Aufnahmen ersetzt eine neue die älteste für diese Gangart und Sensorposition.
+4. Wiederhole die Messungen bei einer anderen Befestigungsposition separat über die Auswahl **Sensor befestigt an**. Die Daten bleiben im lokalen Browserprofil und können für die ausgewählte Position gelöscht werden.
+
+Starte die Aufnahme erst, wenn die Gangart sicher und gleichmäßig ausgeführt wird. Bediene das Device nicht während des Reitens; lasse es fest befestigt und eine andere Person die Aufnahme steuern. Die Rhythmus-/Gangart-Ausgabe ist experimentell und keine validierte Erkennung. Es werden keine Rohdaten oder Kalibrierungsdaten an den KI-Coach gesendet.
+
+### 6. Bewegung testen
 
 1. Tippe auf **Ritt starten**.
 2. Erlaube den Sensorzugriff, falls Chrome danach fragt.
 3. Bewege das Device vorsichtig und beobachte den Status im Tracking-Bereich.
 4. Tippe auf **Ritt beenden**.
 
-Die Gangart wird weiterhin manuell über die Tasten gewählt. Die Sensorwerte liefern zusätzlich heuristisch erkannte Schrittimpulse, die der aktuell ausgewählten Gangart zugeordnet werden. Das ist keine automatische Gangarterkennung und keine validierte Pferdeschritt- oder Taktbewertung.
+Nach mindestens zwei verwertbaren Messungen für jede Gangart kannst du die Kalibrierung ausdrücklich bestätigen. Nur dann wird bei einem Ritt mit derselben Sensorposition die automatische Gangartwahl aktiviert. Sie wechselt erst nach drei aufeinanderfolgenden stabilen Rhythmusschätzungen; bei unsicheren Signalen bleibt die aktuelle Auswahl bestehen. **Pause** bleibt manuell und setzt die automatische Wahl aus, bis du wieder eine aktive Gangart auswählst.
 
-### 6. Optional: Browser-Konsole am PC ansehen
+Zur Bestätigung darf sich jedes Paar der Rhythmusbereiche höchstens um 10% überschneiden. Der Überlappungsgrad wird als Schnittmenge geteilt durch Vereinigungsbereich der BPM-Intervalle (IoU) berechnet; genau 10% ist zulässig.
+
+Mit der bestätigten Kalibrierung vergleicht die lokale Analyse die Streuung der Bewegungsintervalle und die Beschleunigungsdynamik erkannter Rhythmusfenster mit den Referenzmessungen derselben Gangart. Ein Fenster gilt als auffällig, wenn die Intervallstreuung über dem Kalibrierungsmedian um mindestens 8 Prozentpunkte oder 50 Prozent des Basiswerts liegt. Beschleunigungsdynamik ab dem 1,25-Fachen der Referenz wird als möglicher Schwunghinweis dargestellt. Das sind experimentelle, positionsabhängige Sensorindikatoren und keine validierte Bewertung von Takt oder Schwung. Es werden nur zusammengefasste Kennwerte pro Gangart gespeichert, keine Ritt-Rohmessungen.
+
+Ein begrenzter Ringpuffer mit den jüngsten Rohmesswerten bleibt im Arbeitsspeicher des Browsers und wird weder dauerhaft gespeichert noch an den KI-Coach übertragen. Die Sensorwerte liefern weiterhin heuristisch erkannte Schrittimpulse, keine validierte Pferdeschrittzählung.
+
+Im Tab **Analyse** werden die Bewertungen für Takt- und Schwunggefühl der letzten Ritte gemeinsam mit den erfassten Gangartenanteilen visualisiert. Die Bewertung ist eine Selbsteinschätzung; die Grafik zeigt keinen ursächlichen Zusammenhang zwischen Bewertung und Gangartenverteilung.
+
+### 7. Optional: Browser-Konsole am PC ansehen
 
 Für die Fehlersuche verbinde das Device per USB und öffne am PC Chrome:
 

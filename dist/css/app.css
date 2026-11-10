@@ -228,6 +228,34 @@
     color: #FFE57F;
   }
 
+  .calibration-panel {
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 8px;
+    background: rgba(10, 17, 40, 0.55);
+  }
+
+  .calibration-progress {
+    display: block;
+    width: 100%;
+    height: 10px;
+    margin-top: 12px;
+    accent-color: #D4AF37;
+  }
+
+  .calibration-results {
+    margin-top: 10px;
+    color: #8A99AD;
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+
+  .calibration-result {
+    padding: 8px 0;
+    border-top: 1px solid rgba(212, 175, 55, 0.16);
+  }
+
   .btn-save {
     background: linear-gradient(135deg, #FFE57F 0%, #D4AF37 100%);
     color: #0A1128;
@@ -316,6 +344,218 @@
     background: linear-gradient(90deg, #D4AF37, #FFE57F);
     width: 0%;
     transition: width 0.4s ease;
+  }
+
+  .chart-description {
+    color: #8A99AD;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    margin: 4px 0 10px;
+  }
+
+  .analysis-chart-heading {
+    color: #D4AF37;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .chart-scroll {
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .ride-history-chart {
+    display: block;
+    width: 100%;
+    min-width: 340px;
+    height: auto;
+  }
+
+  .ride-chart-grid {
+    stroke: rgba(226, 232, 240, 0.14);
+    stroke-width: 1;
+  }
+
+  .ride-chart-axis,
+  .ride-chart-label {
+    fill: #8A99AD;
+    font-size: 9px;
+  }
+
+  .ride-chart-label {
+    fill: #E2E8F0;
+  }
+
+  .ride-chart-rating-line {
+    fill: none;
+    stroke: #FFE57F;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .ride-chart-rating-point {
+    fill: #FFE57F;
+    stroke: #0A1128;
+    stroke-width: 2;
+  }
+
+  .ride-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin-top: 6px;
+    color: #8A99AD;
+    font-size: 0.72rem;
+  }
+
+  .ride-chart-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .ride-chart-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
+
+  .ride-chart-swatch.walk {
+    background: #4FAE8A;
+  }
+
+  .ride-chart-swatch.trot {
+    background: #D4AF37;
+  }
+
+  .ride-chart-swatch.canter {
+    background: #6386D6;
+  }
+
+  .ride-chart-swatch.rating {
+    width: 12px;
+    height: 3px;
+    background: #FFE57F;
+  }
+
+  .rating-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #0A1128;
+    color: #E2E8F0;
+  }
+
+  .rating-summary strong {
+    color: #FFE57F;
+    font-size: 1.15rem;
+  }
+
+  .motion-analysis-chart {
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .motion-gait-row {
+    padding: 10px;
+    border: 1px solid rgba(212, 175, 55, 0.18);
+    border-radius: 8px;
+    background: rgba(10, 17, 40, 0.55);
+  }
+
+  .motion-gait-row h4 {
+    margin-bottom: 8px;
+    color: #FFE57F;
+    font-size: 0.82rem;
+  }
+
+  .motion-metric + .motion-metric {
+    margin-top: 8px;
+  }
+
+  .motion-metric-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+    color: #8A99AD;
+    font-size: 0.72rem;
+  }
+
+  .motion-metric-header strong {
+    color: #E2E8F0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .motion-track {
+    position: relative;
+    height: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 6px;
+    background: #0A1128;
+  }
+
+  .motion-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: inherit;
+    background: #4FAE8A;
+  }
+
+  .motion-trot .motion-fill {
+    background: #D4AF37;
+  }
+
+  .motion-canter .motion-fill {
+    background: #6386D6;
+  }
+
+  .motion-threshold {
+    position: absolute;
+    z-index: 1;
+    top: -2px;
+    bottom: -2px;
+    width: 2px;
+    background: #FFE57F;
+    box-shadow: 0 0 3px #0A1128;
+  }
+
+  .motion-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    margin-top: 8px;
+    color: #8A99AD;
+    font-size: 0.7rem;
+  }
+
+  .motion-chart-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .motion-chart-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: #4FAE8A;
+  }
+
+  .motion-chart-swatch.dynamics {
+    background: #6386D6;
+  }
+
+  .motion-chart-swatch.threshold {
+    width: 2px;
+    height: 12px;
+    background: #FFE57F;
   }
 
   .fazit-box {
