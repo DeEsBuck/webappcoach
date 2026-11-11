@@ -2,6 +2,8 @@
 
 Dein Pixel kann die **echten Bewegungssensoren** liefern. Node muss sie nicht simulieren: Der Server stellt nur die App bereit, während Chrome auf dem Pixel die Sensoren ausliest.
 
+Das auszuliefernde Frontend liegt in `dist/`. Der lokale Server und Vercel verwenden dieses Verzeichnis als Webroot; die Vercel-API-Funktion bleibt unter `api/` im Repository-Root.
+
 ### 1. Node-Server auf dem PC starten
 
 Starte den lokalen Server wie bisher auf **Port 3000** und lass das Terminal geöffnet. Prüfe auf dem PC in einem zweiten PowerShell-Fenster:
@@ -44,6 +46,10 @@ http://localhost:3000/appcoach.html
 ```
 
 Durch `adb reverse` wird dieser Aufruf vom Pixel an den Server auf deinem PC weitergeleitet. `localhost` ist außerdem wichtig, damit der Browser den Ursprung als sicheren Kontext behandeln kann.
+
+### PWA-Start und Einstiegsformular
+
+Das PWA-Manifest startet nach der Installation zunächst unter `profile.html`. Nach dem Ausfüllen wird die Einstiegsanalyse lokal gespeichert. Wenn du im Dialog **Weiter zu Equicoach** auswählst, speichert der Service Worker die abgeschlossene Übergabe in der Cache API und öffnet `appcoach.html`. Bei späteren PWA-Starts leitet der Service Worker den Manifest-Start von `profile.html` automatisch zur Haupt-App um. Der Service Worker cached die App-Dateien aus `dist/` für den Offline-Betrieb; KI-Anfragen an die Cloud werden bis zur nächsten Verbindung zwischengespeichert.
 
 ### 4. Bewegung testen
 

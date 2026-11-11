@@ -252,7 +252,6 @@ function formatTime(ms) {
 
 document.getElementById('askAiBtn').addEventListener('click', async () => {
   // TODO: Hier könnte man die Antwort noch weiter verarbeiten, z.B. HTML-Formatierung, Markdown, etc.
-  // TODO: Man könnte auch die gespeicherten Tagebuch Einträge (history) und die Einstiegsanalyse (metadata) in die Anfrage einbeziehen, um kontextbezogene Antworten zu erhalten.
   const question = document.getElementById('aiQuestion').value.trim();
   const chatOutput = document.getElementById('chatOutput');
   const askAiBtn = document.getElementById('askAiBtn');
@@ -266,13 +265,14 @@ document.getElementById('askAiBtn').addEventListener('click', async () => {
   askAiBtn.disabled = true;
 
   try {
+    const metadata = window.equiMetadata.collectTrainingMetadata();
     // API-Schlüssel niemals im Browser abfragen, speichern oder direkt an Gemini senden:
     // Clientseitige Schlüssel sind sichtbar und keine sichere Lösung für eine veröffentlichte App.
     // Der Serverless-Endpunkt liest den Schlüssel aus einer serverseitigen Umgebungsvariable.
     const response = await fetch('/api/coach', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question })
+      body: JSON.stringify({ question, metadata })
     });
 
     const responseText = await response.text();
@@ -287,6 +287,11 @@ document.getElementById('askAiBtn').addEventListener('click', async () => {
     }
     if (!response.ok) {
       throw new Error(data.error || `Der API-Endpunkt antwortete mit HTTP ${response.status}.`);
+    }
+    if (data.queued === true) {
+      chatOutput.textContent = 'Keine Verbindung: Deine Frage und der Trainingskontext wurden auf diesem Gerät gespeichert. Die Anfrage wird automatisch gesendet, sobald wieder eine Verbindung besteht.';
+      document.getElementById('aiQuestion').value = '';
+      return;
     }
     if (typeof data.answer !== 'string' || !data.answer.trim()) {
       throw new Error('Die Antwort des API-Endpunkts hat nicht das erwartete Format.');

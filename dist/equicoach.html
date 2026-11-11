@@ -4,10 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EquiCoach – Profi-Modus</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="32x32" href="img/icons/appstore-images/ios/32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="img/icons/appstore-images/ios/180.png" />
+  <meta name="theme-color" content="#0A1128" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Equicoach" />
   <link rel="stylesheet" href="css/main.css" />
   <link rel="stylesheet" href="css/coach.css" />
 </head>
 <body class="coach-app">
+
+  <!-- Install Button -->
+  <button id="install" class="app-button" hidden>APP installieren</button>
   <header>
     <h1>EquiCoach – Profi-Modus</h1>
   </header>
@@ -24,16 +33,15 @@
       <h2 id="modelSettingsTitle">Lokale Modelle</h2>
       <p id="modelStatus" class="model-status" role="status" aria-live="polite">Verbinde mit Ollama auf diesem Gerät …</p>
       <fieldset id="modelSettings" disabled>
-        <label for="fastModel">Modell für kurze Fragen</label>
+        <label for="fastModel">Lokales Modell für kurze Fragen</label>
         <select id="fastModel"></select>
-        <label for="advancedModel">Modell für komplexe Anfragen</label>
-        <select id="advancedModel"></select>
       </fieldset>
       <button type="button" id="refreshModelsBtn" class="refresh-models-btn">Ollama-Modelle neu laden</button>
-      <small class="ai-endpoint-note">Fragen, Trainingsdaten und die letzte Einstiegsanalyse werden direkt an Ollama auf diesem Gerät gesendet, nicht an Vercel oder Google. Für die Verbindung muss Ollama diese Website in OLLAMA_ORIGINS erlauben.</small>
+      <small class="ai-endpoint-note">Kurze Fragen gehen an Ollama auf diesem Gerät. Komplexe oder kontextbezogene Fragen werden mit Trainingsdaten und Einstiegsanalyse an den externen Gemini-Profi-Coach gesendet. Ohne Verbindung werden sie lokal gespeichert und später gesendet. Für lokale Antworten muss Ollama laufen und diese Website in OLLAMA_ORIGINS erlauben.</small>
     </section>
   </main>
 
+  <script src="js/pwa.js"></script>
   <script src="js/modules/metadata.js"></script>
   <script src="js/modules/coach.js"></script>
 </body>

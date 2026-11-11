@@ -5,8 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Equicoach – Der rote Leitfaden für dein Pferdetraining</title>
     <link rel="stylesheet" href="css/main.css" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/png" sizes="32x32" href="img/icons/appstore-images/ios/32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="img/icons/appstore-images/ios/180.png" />
+    <meta name="theme-color" content="#0A1128" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Equicoach" />
+    <!-- ... -->
 </head>
 <body class="landing-page">
+    <!-- Install Button -->
+    <button id="install" class="app-button" hidden>APP installieren</button>
 
     <div class="card">
         <!-- Das eingebettete Logo als Text-Code (lädt garantiert immer und überall offline) -->
@@ -46,5 +55,6 @@
         </footer>
     </div>
 
+    <script src="js/pwa.js"></script>
 </body>
 </html>

@@ -21,6 +21,35 @@
     display: flex;
     justify-content: center;
   }
+
+.app-button {
+    display: none;
+    width: 100%;
+    max-width: 300px;
+    margin: -6px auto;
+    font-family: sans-serif;
+    font-weight: 600;
+    font-size: larger;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 21px 25px;
+    border-radius: 0 0 18px 18px;
+    border: 2px solid #0a1129;
+    background: linear-gradient(135deg, #FFE57F 0%, #D4AF37 100%);
+    color: #0A1128;
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+}
+
+.app-button[hidden] {
+    display: none !important;
+}
+
+@media (max-width: 767px) and (pointer: coarse) {
+    .app-button:not([hidden]) {
+        display: block;
+    }
+}
+
   .card {
     background: var(--surface-2);
     border-radius: 12px;
@@ -90,4 +119,44 @@
     max-width: 480px; width: 100%; margin-top: 1rem; padding: 1rem 1.25rem;
     background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 12px;
     font-size: 14px; line-height: 1.6; display: none;
+  }
+  #archiveDialog {
+    width: min(440px, calc(100% - 2rem));
+    margin: auto;
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-2);
+    color: var(--text-primary);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.24);
+  }
+  #archiveDialog::backdrop { background: rgba(15, 18, 20, 0.58); }
+  #archiveDialog h2 { margin: 0 0 0.75rem; font-size: 1.15rem; }
+  #archiveDialog p { margin: 0; color: var(--text-secondary); line-height: 1.5; }
+  .archive-dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+  }
+  .archive-dialog-actions button,
+  .archive-dialog-continue {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--fill-primary);
+    border-radius: var(--radius);
+    background: var(--fill-primary);
+    color: var(--on-primary);
+    font: inherit;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .archive-dialog-actions button {
+    background: var(--surface-2);
+    color: var(--text-primary);
   }
