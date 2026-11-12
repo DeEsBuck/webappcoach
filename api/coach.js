@@ -261,6 +261,8 @@ module.exports = async function handler(req, res) {
     metadata = JSON.stringify(body.metadata);
     if (metadata.length > 20000) {
       return res.status(400).json({ error: 'Die Trainingsdaten sind zu umfangreich.' });
+    }
+  }
   let trainingMetadata = null;
   if (body.trainingMetadata !== undefined && body.trainingMetadata !== null) {
     try {

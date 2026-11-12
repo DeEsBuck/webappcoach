@@ -515,11 +515,14 @@ function updateAnalysisView() {
   document.getElementById('analysisContent').classList.remove('hidden');
 
   const last = history[0];
-  const total = (last.walk + last.trot + last.canter) || 1;
-
-  const wPct = Math.round((last.walk / total) * 100);
-  const tPct = Math.round((last.trot / total) * 100);
-  const cPct = Math.round((last.canter / total) * 100);
+  const percentages = global.equiMetadata.calculateGaitPercentages(
+    last.walk,
+    last.trot,
+    last.canter
+  );
+  const wPct = percentages.walk;
+  const tPct = percentages.trot;
+  const cPct = percentages.canter;
 
   document.getElementById('walkPct').innerText = wPct + '%';
   document.getElementById('trotPct').innerText = tPct + '%';
