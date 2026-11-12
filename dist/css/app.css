@@ -244,15 +244,6 @@
     line-height: 1.4;
   }
 
-  .sensor-debug-option {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0 0 12px;
-    color: #8A99AD;
-    font-size: 0.82rem;
-  }
-
   .sensor-btn {
     width: 100%;
     margin-top: 10px;
@@ -488,73 +479,91 @@
 
   .motion-analysis-chart {
     display: grid;
-    gap: 12px;
+    gap: 8px;
     margin-top: 12px;
   }
 
-  .motion-gait-row {
-    padding: 10px;
+  .motion-line-chart {
+    padding: 8px 4px;
     border: 1px solid rgba(212, 175, 55, 0.18);
     border-radius: 8px;
     background: rgba(10, 17, 40, 0.55);
   }
 
-  .motion-gait-row h4 {
-    margin-bottom: 8px;
-    color: #FFE57F;
-    font-size: 0.82rem;
+  .motion-line-chart-svg {
+    display: block;
+    width: 100%;
+    min-width: 320px;
+    height: auto;
   }
 
-  .motion-metric + .motion-metric {
-    margin-top: 8px;
+  .motion-line-grid {
+    stroke: rgba(226, 232, 240, 0.14);
+    stroke-width: 1;
   }
 
-  .motion-metric-header {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 4px;
-    color: #8A99AD;
-    font-size: 0.72rem;
+  .motion-line-threshold {
+    stroke: #FFE57F;
+    stroke-width: 1.5;
+    stroke-dasharray: 4 3;
   }
 
-  .motion-metric-header strong {
-    color: #E2E8F0;
-    font-variant-numeric: tabular-nums;
+  .motion-line-series {
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
-  .motion-track {
-    position: relative;
-    height: 12px;
-    overflow: hidden;
-    border: 1px solid rgba(212, 175, 55, 0.2);
-    border-radius: 6px;
-    background: #0A1128;
+  .motion-line-point {
+    stroke: #0A1128;
+    stroke-width: 2;
   }
 
-  .motion-fill {
-    position: absolute;
-    inset: 0 auto 0 0;
-    border-radius: inherit;
-    background: #4FAE8A;
+  .motion-rhythm-bar {
+    fill: #4FAE8A;
+    fill-opacity: 0.7;
   }
 
-  .motion-trot .motion-fill {
-    background: #D4AF37;
+  .motion-interval-series {
+    fill: none;
+    stroke: #FFE57F;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
-  .motion-canter .motion-fill {
-    background: #6386D6;
+  .motion-interval-point {
+    fill: #FFE57F;
+    stroke: #0A1128;
+    stroke-width: 1.5;
   }
 
-  .motion-threshold {
-    position: absolute;
-    z-index: 1;
-    top: -2px;
-    bottom: -2px;
-    width: 2px;
-    background: #FFE57F;
-    box-shadow: 0 0 3px #0A1128;
+  .motion-samples-point {
+    fill: #D4AF37;
+    stroke: #0A1128;
+    stroke-width: 1.5;
+  }
+
+  .motion-samples-value {
+    fill: #D4AF37;
+    font-size: 9px;
+    font-weight: 600;
+  }
+
+  .motion-interval-value {
+    fill: #FFE57F;
+    font-size: 8px;
+  }
+
+  .motion-line-axis {
+    fill: #8A99AD;
+    font-size: 9px;
+  }
+
+  .motion-line-value {
+    fill: #E2E8F0;
+    font-size: 9px;
   }
 
   .motion-chart-legend {
@@ -573,9 +582,8 @@
   }
 
   .motion-chart-swatch {
-    width: 10px;
-    height: 10px;
-    border-radius: 2px;
+    width: 12px;
+    height: 3px;
     background: #4FAE8A;
   }
 
@@ -583,10 +591,21 @@
     background: #6386D6;
   }
 
-  .motion-chart-swatch.threshold {
-    width: 2px;
-    height: 12px;
+  .motion-chart-swatch.variation {
     background: #FFE57F;
+  }
+
+  .motion-chart-swatch.samples {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #D4AF37;
+  }
+
+  .motion-chart-swatch.threshold {
+    width: 12px;
+    height: 12px;
+    background: linear-gradient(to bottom, transparent 4px, #FFE57F 4px, #FFE57F 6px, transparent 6px);
   }
 
   .fazit-box {
