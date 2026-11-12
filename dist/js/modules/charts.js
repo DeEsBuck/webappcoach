@@ -146,6 +146,11 @@
     rides.forEach((ride, index) => {
       const x = xForRide(index);
       let segmentBottom = barBottom;
+      const percentages = global.equiMetadata.calculateGaitPercentages(
+        ride.minutes.walk,
+        ride.minutes.trot,
+        ride.minutes.canter
+      );
       if (ride.totalMinutes > 0) {
         gaitSeries.forEach(series => {
           const value = ride.minutes[series.key];
@@ -159,7 +164,7 @@
             fill: series.color
           });
           const title = createSvgElement('title');
-          const percentage = Math.round(value / ride.totalMinutes * 100);
+          const percentage = percentages[series.key];
           title.textContent = `${ride.date}: ${series.label} ${percentage}% (${value.toFixed(1)} min) · Bewertung ${ride.rating}/6`;
           segment.appendChild(title);
           svg.appendChild(segment);

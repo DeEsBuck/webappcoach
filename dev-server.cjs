@@ -100,6 +100,7 @@ const server = http.createServer(async (req, res) => {
   const pathParts = relativePath.split(path.sep);
   const isAllowedFile = pathParts.length === 1
     ? path.extname(relativePath).toLowerCase() === '.html'
+      || ['manifest.json', 'sw.js'].includes(relativePath.toLowerCase())
     : ['css', 'img', 'js'].includes(pathParts[0]);
 
   if (
