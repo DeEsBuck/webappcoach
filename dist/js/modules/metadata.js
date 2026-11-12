@@ -137,29 +137,100 @@
     }
   }
 
+  function normalizeStepCounts(counts) {
+    if (!counts || typeof counts !== 'object') return null;
+    return ['walk', 'trot', 'canter'].reduce((result, gait) => {
+      result[gait] = Number.isSafeInteger(counts[gait]) && counts[gait] >= 0
+        ? counts[gait]
+        : 0;
+      return result;
+    }, {});
+  }
+
+  function normalizeTrainingEntry(entry) {
+    const rating = Number(entry.rating);
+    return {
+      date: text(entry.date, 80),
+      duration: text(entry.duration, 20),
+      walkMinutes: normalizeMinutes(entry.walk),
+      trotMinutes: normalizeMinutes(entry.trot),
+      canterMinutes: normalizeMinutes(entry.canter),
+      stepImpulseEstimate: normalizeStepCounts(entry.stepCounts),
+      sensorMount: ['saddle', 'rider', 'other'].includes(entry.sensorMount) ? entry.sensorMount : null,
+      rhythmRating: Number.isInteger(rating) && rating >= 1 && rating <= 6 ? rating : null,
+      notes: text(entry.note, 500)
+    };
+  }
+
+  function normalizeMinutes(value) {
+    const minutes = Number(value);
+    return Number.isFinite(minutes) && minutes >= 0 ? Math.min(minutes, 1440) : 0;
+  }
+
+  function calculateGaitPercentages(walk, trot, canter) {
+    const minutes = [normalizeMinutes(walk), normalizeMinutes(trot), normalizeMinutes(canter)];
+    const total = minutes.reduce((sum, value) => sum + value, 0);
+    if (total === 0) return { walk: 0, trot: 0, canter: 0 };
+
+    const exact = minutes.map((value) => value / total * 100);
+    const percentages = exact.map(Math.floor);
+    let remaining = 100 - percentages.reduce((sum, value) => sum + value, 0);
+    const remainderOrder = exact
+      .map((value, index) => ({ index, remainder: value - percentages[index] }))
+      .sort((first, second) => second.remainder - first.remainder);
+
+    for (let index = 0; index < remaining; index += 1) {
+      percentages[remainderOrder[index].index] += 1;
+    }
+
+    return {
+      walk: percentages[0],
+      trot: percentages[1],
+      canter: percentages[2]
+    };
+  }
+
+  function summarizeLatestRide(entry) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
+
+    const training = normalizeTrainingEntry(entry);
+    const gaitPercentages = calculateGaitPercentages(
+      training.walkMinutes,
+      training.trotMinutes,
+      training.canterMinutes
+    );
+
+    return {
+      date: training.date,
+      duration: training.duration,
+      gaitMinutes: {
+        walk: training.walkMinutes,
+        trot: training.trotMinutes,
+        canter: training.canterMinutes
+      },
+      gaitPercentages,
+      rhythmRating: training.rhythmRating,
+      notes: training.notes,
+      stepImpulseEstimate: training.stepImpulseEstimate,
+      sensorMount: training.sensorMount
+    };
+  }
+
   function collectTrainingMetadata() {
     const history = readStoredJson('equi_history', []);
     const plan = readStoredJson('equi_plan', []);
 
     return {
-      schemaVersion: 2,
+      schemaVersion: 3,
       latestEntryAnalysis: collectEntryAnalysis(),
+      latestRideAnalysis: Array.isArray(history) ? summarizeLatestRide(history[0]) : null,
       recentTraining: Array.isArray(history)
-        ? history.filter((entry) => entry && typeof entry === 'object').slice(0, 5).map((entry) => ({
-          date: typeof entry.date === 'string' ? entry.date : '',
-          duration: typeof entry.duration === 'string' ? entry.duration : '',
-          walkMinutes: Number(entry.walk) || 0,
-          trotMinutes: Number(entry.trot) || 0,
-          canterMinutes: Number(entry.canter) || 0,
-          stepImpulseEstimate: normalizeStepCounts(entry.stepCounts),
-          sensorMount: ['saddle', 'rider', 'other'].includes(entry.sensorMount) ? entry.sensorMount : null,
-          rhythmRating: Number(entry.rating) || null,
-          notes: typeof entry.note === 'string' ? entry.note.slice(0, 500) : ''
-        }))
+        ? history.filter((entry) => entry && typeof entry === 'object' && !Array.isArray(entry))
+          .slice(0, 5).map(normalizeTrainingEntry)
         : [],
       weeklyPlan: Array.isArray(plan)
-        ? plan.filter((item) => item && typeof item === 'object').slice(0, 7).map((item) => ({
-          training: typeof item.text === 'string' ? item.text.slice(0, 200) : '',
+        ? plan.filter((item) => item && typeof item === 'object' && !Array.isArray(item)).slice(0, 7).map((item) => ({
+          training: text(item.text, 200),
           completed: item.done === true
         })).filter((item) => item.training)
         : []
@@ -177,7 +248,9 @@
   }
 
   global.equiMetadata = {
+    calculateGaitPercentages,
     collectTrainingMetadata,
+    collectEntryAnalysis,
     saveEntryAnalysis
   };
 })(window);

@@ -40,10 +40,34 @@
           </select>
           <small class="sensor-note">Das Sensorprofil ändert den heuristischen Schwellwert. Gerät fest und immer an derselben Stelle befestigen. Schrittzahlen sind erkannte Bewegungsimpulse, keine validierte Pferdeschrittzählung.</small>
         </div>
-        <label class="sensor-debug-option">
-          <input type="checkbox" id="sensorDebug">
-          Sensordaten in Chrome DevTools protokollieren
-        </label>
+        <button type="button" id="calibrationToggle" class="sensor-btn">Sensordaten vor dem ersten Ritt kalibrieren</button>
+        <div id="calibrationPanel" class="calibration-panel hidden">
+          <p class="sensor-note">
+            Erfasse für die gewählte Sensorposition je Gangart eine zusammenhängende Messung von 100 Sekunden.
+            Wähle die Gangart, die während der Aufnahme tatsächlich geritten wird. Rohdaten und Analyse
+            bleiben ausschließlich lokal in diesem Browser und werden nicht an den KI-Coach gesendet.
+            Nach jeder Aufnahme werden die Rohdaten zusätzlich als CSV in der Browserkonsole ausgegeben.
+            Die Messungen dienen nach der Bestätigung als Rhythmus- und Beschleunigungsreferenz.
+            Bedien das Gerät nicht, während du reitest.
+          </p>
+          <div class="form-group">
+            <label for="calibrationGait">Gangart dieser Messung</label>
+            <select id="calibrationGait">
+              <option value="walk">Schritt</option>
+              <option value="trot">Trab</option>
+              <option value="canter">Galopp</option>
+            </select>
+          </div>
+          <button type="button" id="captureCalibrationBtn" class="btn btn-save">100-Sekunden-Messung aufnehmen</button>
+          <button type="button" id="cancelCalibrationBtn" class="sensor-btn hidden">Aufnahme abbrechen</button>
+          <progress id="calibrationProgress" class="calibration-progress hidden" max="100" value="0"></progress>
+          <p id="calibrationStatus" class="tracking-status" role="status" aria-live="polite"></p>
+          <div id="calibrationResults" class="calibration-results" aria-live="polite"></div>
+          <button type="button" id="confirmCalibrationBtn" class="btn btn-save" disabled>
+            Kalibrierung bestätigen und automatische Gangartwahl aktivieren
+          </button>
+          <button type="button" id="clearCalibrationBtn" class="sensor-btn">Kalibrierung dieser Sensorposition löschen</button>
+        </div>
         <button id="startBtn" class="btn btn-start">Ritt starten</button>
         <button id="stopBtn" class="btn btn-stop hidden">Ritt beenden</button>
         <div id="trackingPanel" class="tracking-panel hidden">
@@ -57,6 +81,10 @@
           <div id="trackingStatus" class="tracking-status" role="status" aria-live="polite">
             Gangart auswählen; Sensor wird beim Start verbunden.
           </div>
+          <p id="gaitModeStatus" class="tracking-status" aria-live="polite"></p>
+          <p id="gaitMotionStatus" class="tracking-status" aria-live="polite">
+            Kalibrierte Rhythmus- und Bewegungsanalyse wird beim Tracking eingeblendet.
+          </p>
           <p id="liveStepCounts" class="tracking-status" aria-live="polite">Erkannte Schrittimpulse (Schätzung): Schritt 0 · Trab 0 · Galopp 0</p>
           <button type="button" id="sensorBtn" class="sensor-btn hidden">Bewegungssensor verbinden</button>
         </div>
@@ -71,6 +99,14 @@
         <div class="form-group">
           <label>Erkannte Schrittimpulse (Schätzung)</label>
           <p id="stepSummary" class="sensor-note">Schritt 0 · Trab 0 · Galopp 0</p>
+        </div>
+        <div class="form-group">
+          <label>Lokale Sensorhinweise</label>
+          <div id="gaitAnalysisResult" class="fazit-box">
+            Für diesen Ritt liegen keine auswertbaren kalibrierten Sensorfenster vor.
+          </div>
+          <div id="rideMotionAnalysisChart" class="chart-scroll" aria-label="Grafische Sensorauswertung"></div>
+          <small class="sensor-note">Rhythmusstreuung und Beschleunigungsdynamik werden mit den Messungen derselben Gangart und Sensorposition verglichen. Das ist ein experimenteller Hinweis, keine validierte Diagnose oder direkte Messung von Schwung.</small>
         </div>
 
         <div class="form-group">
@@ -125,6 +161,8 @@
           <textarea id="aiQuestion" placeholder="Beschreibe dein Problem oder deine Frage..."></textarea>
           <small class="ai-endpoint-note">Für Antworten ist ein serverloser API-Endpunkt unter <code>/api/coach</code> erforderlich.</small>
           <small class="ai-endpoint-note">Wenn du offline bist, werden Frage und Trainingskontext lokal gespeichert und bei der nächsten Verbindung gesendet. Die Antwort bleibt lokal, bis sie angezeigt wurde.</small>
+          <small class="ai-endpoint-note">Für KI-Antworten wird ein serverseitig konfigurierter Gemini-Schlüssel benötigt. Lokal läuft die Anfrage über Node.js; in Deployments über den API-Endpunkt.</small>
+          <small class="ai-endpoint-note">Zusammen mit deiner Frage werden – falls vorhanden – die Einstiegsanalyse, die Zusammenfassung des letzten Ritts, bis zu fünf aktuelle Tagebucheinträge und dein Wochenplan an den KI-Dienst übertragen.</small>
         </div>
 
         <button id="askAiBtn" class="btn btn-save">Frage an KI senden</button>
@@ -138,6 +176,29 @@
         <div id="noAnalysisMsg" style="color:#8A99AD; text-align:center;">Noch kein Ritt erfasst.</div>
         
         <div id="analysisContent" class="hidden">
+          <div class="form-group">
+            <h3 class="analysis-chart-heading">Taktgefühl und Gangarten der letzten Ritte</h3>
+            <p class="chart-description">
+              Balken zeigen die Anteile von Schritt, Trab und Galopp; die Linie zeigt deine Takt- und Schwunggefühl-Bewertung
+              (App-Skala: 1 = niedrig, 6 = sehr gut). Die gemeinsame Darstellung zeigt keinen ursächlichen Zusammenhang.
+            </p>
+            <div id="rideHistoryChart" class="chart-scroll"></div>
+          </div>
+
+          <div class="form-group rating-summary">
+            <span>Letzte Takt- und Schwunggefühl-Bewertung</span>
+            <strong id="latestRating">—</strong>
+          </div>
+
+          <div class="form-group">
+            <label>Kalibrierte Sensorhinweise des letzten Ritts</label>
+            <div id="motionAnalysisSummary" class="fazit-box">
+              Für diesen Ritt liegen keine auswertbaren kalibrierten Sensorfenster vor.
+            </div>
+            <div id="motionAnalysisChart" class="chart-scroll" aria-label="Grafische Sensorauswertung"></div>
+            <small class="sensor-note">Auffällig ist die Intervallstreuung oberhalb des Kalibrierungsmedians um mindestens 8 Prozentpunkte oder 50% des Basiswerts. Erhöhte Beschleunigungsdynamik bedeutet mindestens das 1,25-Fache der kalibrierten Referenz und ist nur ein möglicher Schwunghinweis.</small>
+          </div>
+
           <div class="form-group">
             <label>Gangarten-Verteilung:</label>
             <div class="bar-container">
@@ -211,7 +272,10 @@
 
   <script src="js/pwa.js"></script>
   <script src="js/modules/metadata.js"></script>
+  <script src="js/modules/gaitanalyzer.js"></script>
+  <script src="js/modules/sensorcalibration.js"></script>
   <script src="js/modules/ridetracking.js"></script>
+  <script src="js/modules/charts.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
