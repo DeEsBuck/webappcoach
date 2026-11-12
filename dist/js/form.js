@@ -76,6 +76,65 @@ var submitButton = document.getElementById('submitBtn');
 if (!submitButton) throw new Error('Das Formular benötigt einen Button mit der ID "submitBtn".');
 submitButton.addEventListener('click', submitDiagnose);
 
+var archiveDialog = document.getElementById('archiveDialog');
+var archiveDialogTitle = document.getElementById('archiveDialogTitle');
+var archiveDialogMessage = document.getElementById('archiveDialogMessage');
+var editFormButton = document.getElementById('editFormButton');
+var archiveDialogTimer = null;
+var continueToCoachButton = document.getElementById('continueLink');
+var entryAnalysisSaved = false;
+if (!archiveDialog || !archiveDialogTitle || !archiveDialogMessage || !editFormButton || !continueToCoachButton) {
+  throw new Error('Der Hinweisdialog nach der Einstiegsanalyse fehlt.');
+}
+
+var serviceWorkerReady = 'serviceWorker' in navigator
+  ? window.EquiCoachPWA?.ready || navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    .then(function () { return navigator.serviceWorker.ready; })
+    .catch(function (error) {
+      console.error('Der PWA-Service-Worker konnte nicht aktiviert werden.', error);
+      return null;
+    })
+  : Promise.resolve(null);
+
+editFormButton.addEventListener('click', function () {
+  archiveDialog.close();
+  document.getElementById('analysis').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('symptom').focus({ preventScroll: true });
+});
+
+continueToCoachButton.addEventListener('click', async function (event) {
+  if (!entryAnalysisSaved) return;
+  event.preventDefault();
+  continueToCoachButton.setAttribute('aria-busy', 'true');
+
+  try {
+    var registration = await serviceWorkerReady;
+    if (!registration || !registration.active) {
+      throw new Error('Der Service Worker ist für diese Website nicht verfügbar.');
+    }
+
+    await new Promise(function (resolve, reject) {
+      var channel = new MessageChannel();
+      var timeout = window.setTimeout(function () {
+        channel.port1.close();
+        reject(new Error('Der Service Worker hat die Formularübergabe nicht bestätigt.'));
+      }, 3000);
+      channel.port1.onmessage = function (messageEvent) {
+        window.clearTimeout(timeout);
+        channel.port1.close();
+        if (messageEvent.data && messageEvent.data.saved === true) resolve();
+        else reject(new Error('Der Service Worker konnte den gespeicherten Formularstatus nicht bestätigen.'));
+      };
+      registration.active.postMessage({ type: 'ENTRY_ANALYSIS_SAVED' }, [channel.port2]);
+    });
+  } catch (error) {
+    console.error('Der PWA-Startstatus konnte nicht gespeichert werden.', error);
+    archiveDialogMessage.textContent += ' Der automatische App-Start konnte nicht vorgemerkt werden; das Formular kann beim nächsten Start erneut erscheinen.';
+  }
+
+  window.location.assign(continueToCoachButton.href);
+});
+
 function submitDiagnose() {
   var symptom = document.getElementById('symptom').value.trim();
   var selectedSignals = Array.from(
@@ -109,6 +168,18 @@ function submitDiagnose() {
     ziel: document.getElementById('goal').value
   };
 
+  var archived = renderResult(data, diagnose(data));
+  entryAnalysisSaved = archived;
+  window.clearTimeout(archiveDialogTimer);
+  archiveDialogTitle.textContent = archived
+    ? 'Einstiegsdaten gespeichert'
+    : 'Einstiegsdaten nicht gespeichert';
+  archiveDialogMessage.textContent = archived
+    ? 'Deine Angaben wurden lokal für den EquiCoach-Assistenten gespeichert. Du kannst das Formular noch einmal bearbeiten oder direkt zum Assistenten wechseln.'
+    : 'Deine Angaben konnten nicht für den EquiCoach-Assistenten gespeichert werden. Du kannst das Formular noch einmal bearbeiten oder trotzdem zum Assistenten wechseln.';
+  archiveDialogTimer = window.setTimeout(function () {
+    archiveDialog.showModal();
+  }, 5000);
   renderResult(data, diagnose(data));
 }
 
@@ -168,9 +239,11 @@ function renderResult(data, diagnosis) {
   var box = document.getElementById('resultBox');
   var html = '<p style="margin:0 0 8px; font-weight:600;">Ergebnis für ' +
     escapeHtml(data.name) + '</p>';
+  var archived = false;
 
   try {
     window.equiMetadata.saveEntryAnalysis(data, diagnosis);
+    archived = true;
   } catch (error) {
     console.error('Die Einstiegsanalyse konnte nicht für den EquiCoach gespeichert werden.', error);
     html += '<p role="alert">Die Einstiegsanalyse konnte nicht für den EquiCoach gespeichert werden: ' +
@@ -220,6 +293,7 @@ function renderResult(data, diagnosis) {
   box.innerHTML = html;
   box.style.display = 'block';
   box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  return archived;
 }
 
 function getContextDetails(data) {

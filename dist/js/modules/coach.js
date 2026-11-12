@@ -102,12 +102,55 @@ sendBtn.addEventListener('click', async () => {
     return;
   }
 
+  const useCloud = isCloudRequest(question);
+  const model = fastModelSelect.value;
+  if (!useCloud && !model) {
+    chatOutput.textContent = 'Für kurze Fragen benötigst du ein lokales Ollama-Modell. Komplexe Fragen kannst du an den Cloud-Coach senden.';
   if (!fastModelSelect.value || !advancedModelSelect.value) {
     chatOutput.textContent = 'Bitte verbinde zuerst Ollama und lade mindestens ein lokales Modell.';
     return;
   }
 
   const metadata = window.equiMetadata.collectTrainingMetadata();
+  chatOutput.textContent = useCloud
+    ? 'Analysiere die komplexe Frage mit dem Cloud-Profi-Coach …'
+    : `Analysiere lokal mit ${model} …`;
+  sendBtn.disabled = true;
+
+  try {
+    if (useCloud) {
+      const response = await fetch('/api/coach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, metadata, mode: 'professional' })
+      });
+
+      const responseText = await response.text();
+      let data;
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        throw new Error(response.ok
+          ? 'Der Cloud-Endpunkt lieferte keine gültige JSON-Antwort.'
+          : `Der Cloud-Endpunkt antwortete mit HTTP ${response.status}.`);
+      }
+      if (!response.ok) {
+        throw new Error(data.error || `Der Cloud-Endpunkt antwortete mit HTTP ${response.status}.`);
+      }
+      if (data.queued === true) {
+        chatOutput.textContent = 'Keine Verbindung: Frage und Trainingskontext wurden lokal gespeichert und werden gesendet, sobald wieder eine Verbindung besteht.';
+        userPromptInput.value = '';
+        return;
+      }
+      if (typeof data.answer !== 'string' || !data.answer.trim()) {
+        throw new Error('Der Cloud-Endpunkt lieferte keine gültige Antwort.');
+      }
+
+      chatOutput.textContent = `Antwort (Gemini Cloud):\n\n${data.answer}`;
+      userPromptInput.value = '';
+      return;
+    }
+
 
   const model = isAdvancedRequest(question)
     ? advancedModelSelect.value
@@ -142,7 +185,7 @@ sendBtn.addEventListener('click', async () => {
       throw new Error('Ollama lieferte keine gültige Antwort.');
     }
 
-    chatOutput.textContent = `Antwort (${model}):\n\n${answer}`;
+    chatOutput.textContent = `Antwort (lokal, ${model}):\n\n${answer}`;
     userPromptInput.value = '';
   } catch (error) {
     chatOutput.textContent = `Fehler beim lokalen KI-Coach: ${error.message}`;

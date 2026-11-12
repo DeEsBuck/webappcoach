@@ -27,6 +27,7 @@ body.landing-page {
     min-height: 100vh;
 }
 
+
 /* Container im modernen App-Card-Look */
 .landing-page .card {
     background: var(--white);

@@ -4,10 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>EQUICOACH TAKT</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="32x32" href="img/icons/appstore-images/ios/32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="img/icons/appstore-images/ios/180.png" />
+  <meta name="theme-color" content="#0A1128" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Equicoach" />
   <link rel="stylesheet" href="css/app.css" />
 
 </head>
 <body>
+  <!-- Install Button -->
+  <button id="install" class="app-button" hidden>APP installieren</button>
 
   <div class="container">
     
@@ -30,7 +38,7 @@
             <option value="rider">Reiter (z. B. Tasche)</option>
             <option value="other">Anderer Ort</option>
           </select>
-          <small class="sensor-note">Gerät fest und während der Messungen immer an derselben Stelle befestigen. Schrittzahlen und Gangart-Auswertungen sind experimentelle Schätzungen.</small>
+          <small class="sensor-note">Das Sensorprofil ändert den heuristischen Schwellwert. Gerät fest und immer an derselben Stelle befestigen. Schrittzahlen sind erkannte Bewegungsimpulse, keine validierte Pferdeschrittzählung.</small>
         </div>
         <button type="button" id="calibrationToggle" class="sensor-btn">Sensordaten vor dem ersten Ritt kalibrieren</button>
         <div id="calibrationPanel" class="calibration-panel hidden">
@@ -154,6 +162,8 @@
         <div class="form-group">
           <label>Deine Frage an den KI-Coach:</label>
           <textarea id="aiQuestion" placeholder="Beschreibe dein Problem oder deine Frage..."></textarea>
+          <small class="ai-endpoint-note">Für Antworten ist ein serverloser API-Endpunkt unter <code>/api/coach</code> erforderlich.</small>
+          <small class="ai-endpoint-note">Wenn du offline bist, werden Frage und Trainingskontext lokal gespeichert und bei der nächsten Verbindung gesendet. Die Antwort bleibt lokal, bis sie angezeigt wurde.</small>
           <small class="ai-endpoint-note">Für KI-Antworten wird ein serverseitig konfigurierter Gemini-Schlüssel benötigt. Lokal läuft die Anfrage über Node.js; in Deployments über den API-Endpunkt.</small>
           <small class="ai-endpoint-note">Zusammen mit deiner Frage werden – falls vorhanden – die Einstiegsanalyse, die Zusammenfassung des letzten Ritts, bis zu fünf aktuelle Tagebucheinträge und dein Wochenplan an den KI-Dienst übertragen.</small>
         </div>
@@ -263,6 +273,7 @@
     </button>
   </nav>
 
+  <script src="js/pwa.js"></script>
   <script src="js/modules/metadata.js"></script>
   <script src="js/modules/gaitanalyzer.js"></script>
   <script src="js/modules/sensorcalibration.js"></script>

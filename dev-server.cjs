@@ -2,6 +2,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 
+const root = path.join(__dirname, 'dist');
 const projectRoot = __dirname;
 const frontendRoot = path.join(projectRoot, 'dist');
 const coachHandler = require(path.join(projectRoot, 'api', 'coach'));

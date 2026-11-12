@@ -478,6 +478,11 @@ document.getElementById('askAiBtn').addEventListener('click', async () => {
     if (!response.ok) {
       throw new Error(data.error || `Der API-Endpunkt antwortete mit HTTP ${response.status}.`);
     }
+    if (data.queued === true) {
+      chatOutput.textContent = 'Keine Verbindung: Deine Frage und der Trainingskontext wurden auf diesem Gerät gespeichert. Die Anfrage wird automatisch gesendet, sobald wieder eine Verbindung besteht.';
+      document.getElementById('aiQuestion').value = '';
+      return;
+    }
     if (typeof data.answer !== 'string' || !data.answer.trim()) {
       throw new Error('Die Antwort des API-Endpunkts hat nicht das erwartete Format.');
     }

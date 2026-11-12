@@ -1,0 +1,25 @@
+{
+  "name": "Equicoach – Der rote Leitfaden für dein Pferdetraining",
+  "short_name": "Equicoach",
+  "description": "Der rote Leitfaden für dein Pferdetraining",
+  "start_url": "/profile.html",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#0A1128",
+  "background_color": "#0A1128",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "img/icons/appstore-images/android/launchericon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "img/icons/appstore-images/android/launchericon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    }
+  ]
+}

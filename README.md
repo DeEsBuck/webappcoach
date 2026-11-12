@@ -2,6 +2,9 @@
 
 Die statischen Frontend-Dateien liegen in `dist/`. Lokaler Server und Vercel liefern dieses Verzeichnis als Website-Wurzel aus; API-Funktionen und Server-Skripte bleiben im Projekt-Root.
 
+Das auszuliefernde Frontend liegt in `dist/`. Der lokale Server und Vercel verwenden dieses Verzeichnis als Webroot; die Vercel-API-Funktion bleibt unter `api/` im Repository-Root.
+
+### 1. Node-Server auf dem PC starten
 Dein Device kann die **echten Bewegungssensoren** liefern. Node muss sie nicht simulieren: Der Server stellt nur die App bereit, während Chrome auf dem Device die Sensoren ausliest.
 
 ### 1. Gemini lokal und in einer Preview testen
@@ -91,6 +94,11 @@ http://localhost:3000/appcoach.html
 
 ### 5. Sensor vor dem ersten Ritt kalibrieren
 
+### PWA-Start und Einstiegsformular
+
+Das PWA-Manifest startet nach der Installation zunächst unter `profile.html`. Nach dem Ausfüllen wird die Einstiegsanalyse lokal gespeichert. Wenn du im Dialog **Weiter zu Equicoach** auswählst, speichert der Service Worker die abgeschlossene Übergabe in der Cache API und öffnet `appcoach.html`. Bei späteren PWA-Starts leitet der Service Worker den Manifest-Start von `profile.html` automatisch zur Haupt-App um. Der Service Worker cached die App-Dateien aus `dist/` für den Offline-Betrieb; KI-Anfragen an die Cloud werden bis zur nächsten Verbindung zwischengespeichert.
+
+### 4. Bewegung testen
 1. Wähle **Sensor befestigt an** und befestige das Device für alle Vergleichsmessungen an derselben Stelle.
 2. Öffne **Sensordaten vor dem ersten Ritt kalibrieren** und wähle die Gangart, die während der Messung tatsächlich geritten wird.
 3. Nimm für Schritt, Trab und Galopp jeweils bis zu drei separate 10-Sekunden-Messungen auf. Die App zeigt pro Aufnahme die lokale Rhythmus-Schätzung und die ausgewählte Gangart zum Vergleich. Bei drei vorhandenen Aufnahmen ersetzt eine neue die älteste für diese Gangart und Sensorposition.
