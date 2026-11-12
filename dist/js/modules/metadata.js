@@ -201,6 +201,24 @@
     const plan = readStoredJson('equi_plan', []);
 
     return {
+      schemaVersion: 2,
+      latestEntryAnalysis: collectEntryAnalysis(),
+      recentTraining: Array.isArray(history)
+        ? history.filter((entry) => entry && typeof entry === 'object').slice(0, 5).map((entry) => ({
+          date: typeof entry.date === 'string' ? entry.date : '',
+          duration: typeof entry.duration === 'string' ? entry.duration : '',
+          walkMinutes: Number(entry.walk) || 0,
+          trotMinutes: Number(entry.trot) || 0,
+          canterMinutes: Number(entry.canter) || 0,
+          stepImpulseEstimate: normalizeStepCounts(entry.stepCounts),
+          sensorMount: ['saddle', 'rider', 'other'].includes(entry.sensorMount) ? entry.sensorMount : null,
+          rhythmRating: Number(entry.rating) || null,
+          notes: typeof entry.note === 'string' ? entry.note.slice(0, 500) : ''
+        }))
+        : [],
+      weeklyPlan: Array.isArray(plan)
+        ? plan.filter((item) => item && typeof item === 'object').slice(0, 7).map((item) => ({
+          training: typeof item.text === 'string' ? item.text.slice(0, 200) : '',
       schemaVersion: 3,
       latestEntryAnalysis: collectEntryAnalysis(),
       latestRideAnalysis: Array.isArray(history) ? summarizeLatestRide(history[0]) : null,

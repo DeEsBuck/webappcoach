@@ -4,12 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Einstiegsformular – Ausbildungsskala</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/png" sizes="32x32" href="img/icons/appstore-images/ios/32.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="img/icons/appstore-images/ios/180.png" />
+<meta name="theme-color" content="#0A1128" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Equicoach" />
 <link rel="stylesheet" href="css/form.css" />
 
 </head>
 <body>
 
 <div style="display:flex; flex-direction:column; align-items:center; width:100%;">
+
+<!-- Install Button -->
+<button id="install" class="app-button" hidden>APP installieren</button>
 
 <div class="card" id="analysis">
 
@@ -148,7 +157,31 @@
 <div id="resultBox"></div>
 
 </div>
+<dialog id="archiveDialog" aria-labelledby="archiveDialogTitle" aria-describedby="archiveDialogMessage">
+  <h2 id="archiveDialogTitle">Einstiegsdaten gespeichert</h2>
+  <p id="archiveDialogMessage"></p>
+  <div class="archive-dialog-actions">
+    <button type="button" id="editFormButton">Formular bearbeiten</button>
+    <a class="archive-dialog-continue" href="appcoach.html" id="continueLink">Weiter zu Equicoach</a>
+  </div>
+</dialog>
+<script src="js/pwa.js"></script>
 <script type="text/javascript" src="js/modules/metadata.js"></script>
 <script type="text/javascript" src="js/form.js"></script>
+<script>
+  // Warn user before navigating away if there is unsaved data or incomplete process
+  document.getElementById('continueLink').addEventListener('click', function(event) {
+    // Replace the following condition with your actual unsaved data check
+    const hasUnsavedData = false; // Set to true if there is unsaved data
+    if (hasUnsavedData) {
+      const confirmLeave = confirm('Du hast ungespeicherte Daten. Möchtest du wirklich fortfahren?');
+      if (!confirmLeave) {
+        event.preventDefault();
+      }
+    }
+    // Otherwise, allow navigation
+  });
+
+</script>
 </body>
 </html>

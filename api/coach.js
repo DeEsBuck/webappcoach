@@ -253,6 +253,14 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Bitte gib eine Frage mit maximal 4000 Zeichen ein.' });
   }
 
+  let metadata = '';
+  if (body.metadata !== undefined && body.metadata !== null) {
+    if (typeof body.metadata !== 'object' || Array.isArray(body.metadata)) {
+      return res.status(400).json({ error: 'Die Trainingsdaten haben ein ungültiges Format.' });
+    }
+    metadata = JSON.stringify(body.metadata);
+    if (metadata.length > 20000) {
+      return res.status(400).json({ error: 'Die Trainingsdaten sind zu umfangreich.' });
   let trainingMetadata = null;
   if (body.trainingMetadata !== undefined && body.trainingMetadata !== null) {
     try {
