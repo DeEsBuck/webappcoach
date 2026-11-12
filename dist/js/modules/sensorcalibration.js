@@ -8,10 +8,11 @@
   const storageKey = 'equi_sensor_calibration';
   const mounts = ['saddle', 'rider', 'other'];
   const gaits = ['walk', 'trot', 'canter'];
-  const maxRhythmOverlapPercent = 10;
+  const maxRhythmOverlapPercent = 25;
   const gaitLabels = { walk: 'Schritt', trot: 'Trab', canter: 'Galopp' };
-  const captureDurationMs = 10000;
-  const maxCapturesPerGait = 3;
+  const captureDurationMs = 100000;
+  const minimumCaptureDurationMs = captureDurationMs * 0.9;
+  const maxCapturesPerGait = 1;
   let activeCapture = null;
 
   function emptyCalibration() {
@@ -62,14 +63,6 @@
     global.localStorage.setItem(storageKey, JSON.stringify(calibration));
   }
 
-  function median(values) {
-    const sorted = [...values].sort((a, b) => a - b);
-    const middle = Math.floor(sorted.length / 2);
-    return sorted.length % 2
-      ? sorted[middle]
-      : (sorted[middle - 1] + sorted[middle]) / 2;
-  }
-
   function intervalOverlapPercent(first, second) {
     const firstMin = first.centerBpm - first.toleranceBpm;
     const firstMax = first.centerBpm + first.toleranceBpm;
@@ -85,6 +78,14 @@
     for (const gait of gaits) {
       const measurements = calibration.mounts[mount][gait]
         .map(capture => {
+          const timestamps = capture.samples
+            .map(sample => sample.timestamp)
+            .filter(Number.isFinite);
+          const durationMs = timestamps.length > 1
+            ? Math.max(...timestamps) - Math.min(...timestamps)
+            : 0;
+          if (durationMs < minimumCaptureDurationMs) return null;
+
           const analyzed = analyzer.analyzeMotionSamples(capture.samples);
           const bpm = Number.isFinite(capture.analysis.bpm) && capture.analysis.bpm > 0
             ? capture.analysis.bpm
@@ -95,25 +96,25 @@
           const intervalVariationPercent = Number.isFinite(capture.analysis.intervalVariationPercent)
             ? capture.analysis.intervalVariationPercent
             : analyzed.intervalVariationPercent;
-          return { bpm, signalDeviation, intervalVariationPercent };
+          return { bpm, signalDeviation, intervalVariationPercent, durationMs };
         })
-        .filter(measurement =>
+        .filter(measurement => measurement &&
           Number.isFinite(measurement.bpm) && measurement.bpm > 0 &&
           Number.isFinite(measurement.signalDeviation) && measurement.signalDeviation > 0 &&
           Number.isFinite(measurement.intervalVariationPercent)
         );
-      if (measurements.length < 2) {
+      if (!measurements.length) {
         return {
           ready: false,
-          reason: `Für ${gait} werden mindestens zwei Messungen mit auswertbarem Rhythmus und Beschleunigungssignal benötigt.`
+          reason: `Für ${gaitLabels[gait]} wird eine mindestens 90 Sekunden lange Messung mit auswertbarem Rhythmus und Beschleunigungssignal benötigt.`
         };
       }
 
-      const centerBpm = median(measurements.map(measurement => measurement.bpm));
-      const medianDeviation = median(measurements.map(measurement => Math.abs(measurement.bpm - centerBpm)));
-      const toleranceBpm = Math.max(8, medianDeviation * 3);
-      const signalDeviation = median(measurements.map(measurement => measurement.signalDeviation));
-      const intervalVariationPercent = median(measurements.map(measurement => measurement.intervalVariationPercent));
+      const measurement = measurements[0];
+      const centerBpm = measurement.bpm;
+      const toleranceBpm = 8;
+      const signalDeviation = measurement.signalDeviation;
+      const intervalVariationPercent = measurement.intervalVariationPercent;
       if (
         !Number.isFinite(centerBpm) ||
         !Number.isFinite(toleranceBpm) ||
@@ -191,6 +192,7 @@
     calibration.mounts[mount][gait] = captures.slice(-maxCapturesPerGait);
     calibration.confirmedMounts[mount] = false;
     writeCalibration(calibration);
+    console.info(`[EquiCoach Kalibrierung CSV]\n${formatCaptureCsv(mount, gait, samples)}`);
     return {
       capture: {
         completedAt: capture.completedAt,
@@ -199,6 +201,27 @@
       },
       replacedOldest
     };
+  }
+
+  function formatCaptureCsv(mount, gait, samples) {
+    const normalized = analyzer.normalizeMotionSamples(samples);
+    const firstTimestamp = normalized[0]?.timestamp ?? 0;
+    const rows = [
+      'gait,sensor_mount,elapsed_ms,acceleration_x_mps2,acceleration_y_mps2,acceleration_z_mps2,includes_gravity,signal_magnitude_mps2'
+    ];
+    normalized.forEach((sample, index) => {
+      rows.push([
+        gait,
+        mount,
+        (sample.timestamp - firstTimestamp).toFixed(1),
+        sample.x.toFixed(4),
+        sample.y.toFixed(4),
+        sample.z.toFixed(4),
+        samples[index].includesGravity === true,
+        sample.magnitude.toFixed(4)
+      ].join(','));
+    });
+    return rows.join('\n');
   }
 
   function attachDeviceMotion(onSample) {

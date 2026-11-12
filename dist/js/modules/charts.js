@@ -226,50 +226,30 @@
     const chart = document.createElement('div');
     chart.className = 'motion-analysis-chart';
     chart.setAttribute('role', 'group');
-    chart.setAttribute('aria-label', 'Kalibrierte Rhythmus- und Beschleunigungsanalyse je Gangart');
-    const dynamicsScale = 2;
+    chart.setAttribute('aria-label', 'Rhythmusdiagramm mit Balken, Intervallstreuung und Samples sowie Beschleunigungsdynamik je Gangart');
 
-    gaits.forEach(({ key, label, stats }) => {
-      const row = document.createElement('section');
-      row.className = 'motion-gait-row';
-      const heading = document.createElement('h4');
-      heading.textContent = `${label} · ${stats.windows} Fenster`;
-      row.appendChild(heading);
-
-      const irregularity = Number.isFinite(stats.irregularityPercent)
-        ? Math.min(100, Math.max(0, stats.irregularityPercent))
-        : null;
-      const dynamicsRatio = Number.isFinite(stats.averageDynamicsRatio)
-        ? Math.max(0, stats.averageDynamicsRatio)
-        : null;
-
-      row.appendChild(createMetricBar(
-        'Rhythmusauffälligkeiten',
-        irregularity,
-        irregularity === null ? '—' : `${irregularity.toFixed(1)}%`,
-        null,
-        key
-      ));
-
-      row.appendChild(createMetricBar(
-        'Beschleunigungsdynamik',
-        dynamicsRatio === null ? null : Math.min(100, dynamicsRatio / dynamicsScale * 100),
-        dynamicsRatio === null ? '—' : `${dynamicsRatio.toFixed(2)}×`,
-        1.25 / dynamicsScale * 100,
-        key
-      ));
-      chart.appendChild(row);
+    appendMotionRhythmChart(chart, gaits);
+    appendMotionLineChart(chart, gaits, {
+      key: 'averageDynamicsRatio',
+      title: 'Beschleunigungsdynamik (× Kalibrierungswert)',
+      color: '#6386D6',
+      max: Math.max(2, Math.ceil(Math.max(...gaits.map(({ stats }) =>
+        Number.isFinite(stats.averageDynamicsRatio) ? stats.averageDynamicsRatio : 0
+      )))),
+      threshold: 1.25,
+      format: value => `${value.toFixed(2)}×`
     });
-
     container.appendChild(chart);
+
     const legend = document.createElement('div');
     legend.className = 'motion-chart-legend';
-    const items = [
-      { label: 'Rhythmus: Anteil auffälliger Fenster', type: 'irregularity' },
-      { label: 'Dynamik: Faktor zur Kalibrierung', type: 'dynamics' },
+    [
+      { label: 'Rhythmusauffälligkeiten (%)', type: 'irregularity' },
+      { label: 'Intervallstreuung (%)', type: 'variation' },
+      { label: 'Samples', type: 'samples' },
+      { label: 'Beschleunigungsdynamik', type: 'dynamics' },
       { label: 'Schwunghinweis ab 1,25×', type: 'threshold' }
-    ];
-    items.forEach(item => {
+    ].forEach(item => {
       const entry = document.createElement('span');
       entry.className = 'motion-chart-legend-item';
       const swatch = document.createElement('span');
@@ -282,37 +262,254 @@
     container.appendChild(legend);
   }
 
-  function createMetricBar(label, percentage, valueLabel, threshold, gait) {
-    const metric = document.createElement('div');
-    metric.className = 'motion-metric';
-    const header = document.createElement('div');
-    header.className = 'motion-metric-header';
-    const name = document.createElement('span');
-    name.textContent = label;
-    const value = document.createElement('strong');
-    value.textContent = valueLabel;
-    header.append(name, value);
-    metric.appendChild(header);
+  function appendMotionRhythmChart(container, gaits) {
+    const width = 360;
+    const height = 210;
+    const left = 44;
+    const right = width - 38;
+    const top = 24;
+    const bottom = 158;
+    const maxVariation = Math.max(...gaits.map(({ stats }) =>
+      Number.isFinite(stats.averageIntervalVariationPercent)
+        ? stats.averageIntervalVariationPercent
+        : 0
+    ));
+    const percentMax = Math.max(100, Math.ceil(maxVariation / 20) * 20);
+    const maxSamples = Math.max(1, ...gaits.map(({ stats }) => stats.windows));
+    const sampleStep = Math.max(1, Math.ceil(maxSamples / 4));
+    const sampleMax = Math.ceil(maxSamples / sampleStep) * sampleStep;
+    const yForPercent = value => bottom - value / percentMax * (bottom - top);
+    const yForSamples = value => bottom - value / sampleMax * (bottom - top);
+    const xForIndex = index => gaits.length === 1
+      ? (left + right) / 2
+      : left + index * (right - left) / (gaits.length - 1);
+    const svg = createSvgElement('svg', {
+      class: 'motion-line-chart-svg',
+      viewBox: `0 0 ${width} ${height}`,
+      role: 'img',
+      'aria-label': 'Rhythmusauffälligkeiten als Balken, mittlere Intervallstreuung als Linie und Anzahl der Samples als Punkte'
+    });
+    const title = createSvgElement('title');
+    title.textContent = 'Rhythmusauffälligkeiten, Intervallstreuung und Samples';
+    svg.appendChild(title);
 
-    const track = document.createElement('div');
-    track.className = `motion-track motion-${gait}`;
-    track.setAttribute('role', 'img');
-    track.setAttribute('aria-label', `${label}: ${valueLabel}`);
-    if (threshold !== null) {
-      const marker = document.createElement('span');
-      marker.className = 'motion-threshold';
-      marker.style.left = `${threshold}%`;
-      marker.setAttribute('aria-hidden', 'true');
-      track.appendChild(marker);
+    [0, percentMax / 2, percentMax].forEach(value => {
+      const y = yForPercent(value);
+      svg.appendChild(createSvgElement('line', {
+        x1: left,
+        x2: right,
+        y1: y,
+        y2: y,
+        class: 'motion-line-grid'
+      }));
+      appendText(svg, `${value.toFixed(0)}%`, {
+        x: left - 6,
+        y: y + 3,
+        'text-anchor': 'end',
+        class: 'motion-line-axis'
+      });
+    });
+
+    for (let value = 0; value <= sampleMax; value += sampleStep) {
+      appendText(svg, String(value), {
+        x: right + 7,
+        y: yForSamples(value) + 3,
+        'text-anchor': 'start',
+        class: 'motion-line-axis'
+      });
     }
-    if (percentage !== null) {
-      const fill = document.createElement('span');
-      fill.className = 'motion-fill';
-      fill.style.width = `${percentage}%`;
-      track.appendChild(fill);
+
+    const barWidth = Math.min(34, (right - left) / gaits.length * 0.42);
+    const intervalPoints = [];
+    gaits.forEach(({ label, stats }, index) => {
+      const x = xForIndex(index);
+      const irregularity = stats.irregularityPercent;
+      if (Number.isFinite(irregularity)) {
+        const y = yForPercent(irregularity);
+        const bar = createSvgElement('rect', {
+          x: x - barWidth / 2,
+          y,
+          width: barWidth,
+          height: Math.max(0, bottom - y),
+          class: 'motion-rhythm-bar'
+        });
+        const barTitle = createSvgElement('title');
+        barTitle.textContent = `${label}: ${irregularity.toFixed(1)}% rhythmusauffällige Samples`;
+        bar.appendChild(barTitle);
+        svg.appendChild(bar);
+        appendText(svg, `${irregularity.toFixed(1)}%`, {
+          x,
+          y: y - 5,
+          'text-anchor': 'middle',
+          class: 'motion-line-value'
+        });
+      }
+
+      if (Number.isFinite(stats.averageIntervalVariationPercent)) {
+        intervalPoints.push({
+          x,
+          y: yForPercent(stats.averageIntervalVariationPercent),
+          label,
+          value: stats.averageIntervalVariationPercent
+        });
+      }
+
+      const sampleY = yForSamples(stats.windows);
+      const samplePoint = createSvgElement('circle', {
+        cx: x,
+        cy: sampleY,
+        r: 4,
+        class: 'motion-samples-point'
+      });
+      const sampleTitle = createSvgElement('title');
+      sampleTitle.textContent = `${label}: ${stats.windows} Samples`;
+      samplePoint.appendChild(sampleTitle);
+      svg.appendChild(samplePoint);
+      appendText(svg, String(stats.windows), {
+        x,
+        y: sampleY - 8,
+        'text-anchor': 'middle',
+        class: 'motion-samples-value'
+      });
+      appendText(svg, label, {
+        x,
+        y: 181,
+        'text-anchor': 'middle',
+        class: 'motion-line-axis'
+      });
+    });
+
+    if (intervalPoints.length > 1) {
+      svg.appendChild(createSvgElement('polyline', {
+        points: intervalPoints.map(point => `${point.x},${point.y}`).join(' '),
+        class: 'motion-interval-series'
+      }));
     }
-    metric.appendChild(track);
-    return metric;
+    intervalPoints.forEach(point => {
+      const marker = createSvgElement('circle', {
+        cx: point.x,
+        cy: point.y,
+        r: 3.5,
+        class: 'motion-interval-point'
+      });
+      const markerTitle = createSvgElement('title');
+      markerTitle.textContent = `${point.label}: Intervallstreuung ${point.value.toFixed(1)}%`;
+      marker.appendChild(markerTitle);
+      svg.appendChild(marker);
+      appendText(svg, `${point.value.toFixed(1)}%`, {
+        x: point.x,
+        y: point.y + 13,
+        'text-anchor': 'middle',
+        class: 'motion-interval-value'
+      });
+    });
+
+    appendText(svg, 'Samples', {
+      x: right + 7,
+      y: 13,
+      'text-anchor': 'start',
+      class: 'motion-line-axis'
+    });
+    container.appendChild(svg);
+  }
+
+  function appendMotionLineChart(container, gaits, metric) {
+    const width = 360;
+    const height = 190;
+    const left = 44;
+    const right = width - 12;
+    const top = 20;
+    const bottom = 145;
+    const yForValue = value => bottom - value / metric.max * (bottom - top);
+    const xForIndex = index => gaits.length === 1
+      ? (left + right) / 2
+      : left + index * (right - left) / (gaits.length - 1);
+    const section = document.createElement('section');
+    section.className = 'motion-line-chart';
+    const svg = createSvgElement('svg', {
+      class: 'motion-line-chart-svg',
+      viewBox: `0 0 ${width} ${height}`,
+      role: 'img',
+      'aria-label': metric.title
+    });
+    const title = createSvgElement('title');
+    title.textContent = metric.title;
+    svg.appendChild(title);
+
+    [0, metric.max / 2, metric.max].forEach(value => {
+      const y = yForValue(value);
+      svg.appendChild(createSvgElement('line', {
+        x1: left,
+        x2: right,
+        y1: y,
+        y2: y,
+        class: 'motion-line-grid'
+      }));
+      appendText(svg, metric.format(value), {
+        x: left - 6,
+        y: y + 3,
+        'text-anchor': 'end',
+        class: 'motion-line-axis'
+      });
+    });
+
+    if (Number.isFinite(metric.threshold)) {
+      const thresholdY = yForValue(metric.threshold);
+      svg.appendChild(createSvgElement('line', {
+        x1: left,
+        x2: right,
+        y1: thresholdY,
+        y2: thresholdY,
+        class: 'motion-line-threshold'
+      }));
+    }
+
+    const points = gaits
+      .filter(({ stats }) => Number.isFinite(stats[metric.key]))
+      .map(({ key, label, stats }, index) => ({
+        key,
+        label,
+        value: stats[metric.key],
+        windows: stats.windows,
+        x: xForIndex(index)
+      }));
+
+    if (points.length > 1) {
+      svg.appendChild(createSvgElement('polyline', {
+        points: points.map(point => `${point.x},${yForValue(point.value)}`).join(' '),
+        class: 'motion-line-series',
+        stroke: metric.color
+      }));
+    }
+
+    points.forEach(point => {
+      const circle = createSvgElement('circle', {
+        cx: point.x,
+        cy: yForValue(point.value),
+        r: 4,
+        class: 'motion-line-point',
+        fill: metric.color
+      });
+      const pointTitle = createSvgElement('title');
+      pointTitle.textContent = `${point.label}: ${metric.format(point.value)} · ${point.windows} Fenster`;
+      circle.appendChild(pointTitle);
+      svg.appendChild(circle);
+      appendText(svg, metric.format(point.value), {
+        x: point.x,
+        y: yForValue(point.value) - 8,
+        'text-anchor': 'middle',
+        class: 'motion-line-value'
+      });
+      appendText(svg, point.label, {
+        x: point.x,
+        y: 166,
+        'text-anchor': 'middle',
+        class: 'motion-line-axis'
+      });
+    });
+
+    section.appendChild(svg);
+    container.appendChild(section);
   }
 
   namespace.Charts = { renderRideHistoryChart, renderMotionAnalysisChart };
