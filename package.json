@@ -1,9 +1,12 @@
 {
   "private": true,
+  "engines": {
+    "node": ">=20.6"
+  },
   "dependencies": {
     "@google/genai": "^2.31.0"
   },
   "scripts": {
-    "dev": "node dev-server.cjs"
+    "dev": "node --env-file=.env.local dev-server.cjs"
   }
 }

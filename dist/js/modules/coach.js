@@ -3,6 +3,7 @@ const MODEL_PREFERENCES_KEY = 'equi_ollama_model_preferences';
 const modelSettings = document.getElementById('modelSettings');
 const modelStatus = document.getElementById('modelStatus');
 const fastModelSelect = document.getElementById('fastModel');
+const advancedModelSelect = document.getElementById('advancedModel');
 const refreshModelsBtn = document.getElementById('refreshModelsBtn');
 const sendBtn = document.getElementById('sendBtn');
 const userPromptInput = document.getElementById('userPrompt');
@@ -19,7 +20,8 @@ function getModelPreferences() {
 
 function saveModelPreferences() {
   localStorage.setItem(MODEL_PREFERENCES_KEY, JSON.stringify({
-    fast: fastModelSelect.value
+    fast: fastModelSelect.value,
+    advanced: advancedModelSelect.value
   }));
 }
 
@@ -42,6 +44,7 @@ function setModelOptions(select, models, preferred, fallback) {
 async function loadLocalModels() {
   modelStatus.textContent = 'Verbinde mit Ollama auf diesem Gerät …';
   modelSettings.disabled = true;
+  sendBtn.disabled = true;
 
   try {
     const response = await fetch(`${OLLAMA_URL}/api/tags`);
@@ -61,31 +64,33 @@ async function loadLocalModels() {
     if (!models.length) {
       throw new Error('Ollama ist erreichbar, aber es sind keine lokalen Modelle installiert.');
     }
+
     models.sort((first, second) => modelParameterCount(first) - modelParameterCount(second));
     const preferences = getModelPreferences();
     setModelOptions(fastModelSelect, models, preferences.fast, models[0]);
+    setModelOptions(advancedModelSelect, models, preferences.advanced, models[models.length - 1]);
 
     modelSettings.disabled = false;
+    sendBtn.disabled = false;
     const modelCount = models.length === 1
       ? '1 lokales Modell verfügbar.'
       : `${models.length} lokale Modelle verfügbar.`;
-    modelStatus.textContent = `${modelCount} Kurze Fragen bleiben lokal; komplexe Kontext- und Analysefragen werden über Gemini Cloud beantwortet.`;
+    modelStatus.textContent = `${modelCount} Frage und ausgewählte Trainingsdaten bleiben auf diesem Gerät.`;
   } catch (error) {
     const reason = error instanceof TypeError
       ? 'Ollama ist nicht erreichbar oder blockiert den Browserzugriff.'
       : error.message;
-    modelSettings.disabled = true;
-    modelStatus.textContent = `${reason} Ollama muss laufen und diese Website in OLLAMA_ORIGINS erlauben. Komplexe Fragen können weiterhin den Cloud-Coach verwenden.`;
+    modelStatus.textContent = `${reason} Ollama muss laufen und diese Website in OLLAMA_ORIGINS erlauben.`;
   }
 }
 
-function isCloudRequest(question) {
-  const asksForAnalysis = /\b(analys\w*|vergleich\w*|auswert\w*|trainingsplan|training plan|mehrere|multiple|detailliert|detailed|schritt für schritt|step by step|ursache|cause|entwicklung|development|trend|compare|comparison|evaluate|summari[sz]e|zusammenfass\w*)\b/i.test(question);
-  const asksForContext = /\b(trainingsdaten|trainingsverlauf|trainingsstand|trainingstagebuch|tagebuch|einstiegsanalyse|wochenplan|trainingshistorie|training data|training history|kontext|daten|verlauf|historie|bisher|seit der letzten|auf basis|basierend auf|berücksichtige)\b/i.test(question);
-  return question.length > 300 || asksForAnalysis || asksForContext;
+function isAdvancedRequest(question) {
+  const asksForAnalysis = /\b(analys\w*|vergleich\w*|auswertung|trainingsplan|training plan|mehrere|multiple|detailliert|detailed|schritt für schritt|step by step|ursache|cause|entwicklung|development|trend|compare|comparison|evaluate|summari[sz]e)\b/i.test(question);
+  return question.length > 300 || asksForAnalysis;
 }
 
 fastModelSelect.addEventListener('change', saveModelPreferences);
+advancedModelSelect.addEventListener('change', saveModelPreferences);
 refreshModelsBtn.addEventListener('click', loadLocalModels);
 
 sendBtn.addEventListener('click', async () => {
@@ -101,6 +106,8 @@ sendBtn.addEventListener('click', async () => {
   const model = fastModelSelect.value;
   if (!useCloud && !model) {
     chatOutput.textContent = 'Für kurze Fragen benötigst du ein lokales Ollama-Modell. Komplexe Fragen kannst du an den Cloud-Coach senden.';
+  if (!fastModelSelect.value || !advancedModelSelect.value) {
+    chatOutput.textContent = 'Bitte verbinde zuerst Ollama und lade mindestens ein lokales Modell.';
     return;
   }
 
@@ -144,6 +151,14 @@ sendBtn.addEventListener('click', async () => {
       return;
     }
 
+
+  const model = isAdvancedRequest(question)
+    ? advancedModelSelect.value
+    : fastModelSelect.value;
+  chatOutput.textContent = `Analysiere lokal mit ${model} …`;
+  sendBtn.disabled = true;
+
+  try {
     const response = await fetch(`${OLLAMA_URL}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

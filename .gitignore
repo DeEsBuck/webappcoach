@@ -1,5 +1,10 @@
 .idea
 .vercel
-.vscode
+.vscode/*
+!.vscode/
+!.vscode/launch.json
 node_modules/
+.env
+.env.*
+!.env.example
 *.local

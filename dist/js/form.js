@@ -180,6 +180,7 @@ function submitDiagnose() {
   archiveDialogTimer = window.setTimeout(function () {
     archiveDialog.showModal();
   }, 5000);
+  renderResult(data, diagnose(data));
 }
 
 function diagnose(data) {
