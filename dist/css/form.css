@@ -22,11 +22,13 @@
     justify-content: center;
   }
 
-.app-button {
+  .app-button {
     display: none;
+    position: absolute;
+    top: -3px;
     width: 100%;
     max-width: 300px;
-    margin: -6px auto;
+    margin: -1.6rem 0 auto;
     font-family: sans-serif;
     font-weight: 600;
     font-size: larger;
@@ -38,17 +40,17 @@
     background: linear-gradient(135deg, #FFE57F 0%, #D4AF37 100%);
     color: #0A1128;
     box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
-}
+  }
 
-.app-button[hidden] {
+  .app-button[hidden] {
     display: none !important;
-}
+  }
 
-@media (max-width: 767px) and (pointer: coarse) {
+  @media (max-width: 767px) and (pointer: coarse) {
     .app-button:not([hidden]) {
-        display: block;
+      display: block;
     }
-}
+  }
 
   .card {
     background: var(--surface-2);
