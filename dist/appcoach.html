@@ -46,7 +46,8 @@
             Erfasse für die gewählte Sensorposition je Gangart eine zusammenhängende Messung von 100 Sekunden.
             Wähle die Gangart, die während der Aufnahme tatsächlich geritten wird. Rohdaten und Analyse
             bleiben ausschließlich lokal in diesem Browser und werden nicht an den KI-Coach gesendet.
-            Nach jeder Aufnahme werden die Rohdaten zusätzlich als CSV in der Browserkonsole ausgegeben.
+            Nach jeder Aufnahme erscheinen die Rohdaten als CSV in der Browserkonsole. Nach der Kalibrierungsbestätigung
+            kannst du die Rohdaten aller Gangarten zusätzlich als CSV-Datei herunterladen.
             Die Messungen dienen nach der Bestätigung als Rhythmus- und Beschleunigungsreferenz.
             Bedien das Gerät nicht, während du reitest.
           </p>
@@ -161,7 +162,7 @@
           <textarea id="aiQuestion" placeholder="Beschreibe dein Problem oder deine Frage..."></textarea>
           <small class="ai-endpoint-note">Für Antworten ist ein serverloser API-Endpunkt unter <code>/api/coach</code> erforderlich.</small>
           <small class="ai-endpoint-note">Wenn du offline bist, werden Frage und Trainingskontext lokal gespeichert und bei der nächsten Verbindung gesendet. Die Antwort bleibt lokal, bis sie angezeigt wurde.</small>
-          <small class="ai-endpoint-note">Für KI-Antworten wird ein serverseitig konfigurierter Gemini-Schlüssel benötigt. Lokal läuft die Anfrage über Node.js; in Deployments über den API-Endpunkt.</small>
+          <small class="ai-endpoint-note">Für KI-Antworten wird ein serverseitig konfigurierter OpenRouter-Schlüssel benötigt. Lokal läuft die Anfrage über Node.js; in Deployments über den API-Endpunkt.</small>
           <small class="ai-endpoint-note">Zusammen mit deiner Frage werden – falls vorhanden – die Einstiegsanalyse, die Zusammenfassung des letzten Ritts, bis zu fünf aktuelle Tagebucheinträge und dein Wochenplan an den KI-Dienst übertragen.</small>
         </div>
 

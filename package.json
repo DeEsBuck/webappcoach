@@ -3,10 +3,8 @@
   "engines": {
     "node": ">=20.6"
   },
-  "dependencies": {
-    "@google/genai": "^2.31.0"
-  },
   "scripts": {
-    "dev": "node --env-file=.env.local dev-server.cjs"
+    "dev": "node --env-file=.env.local dev-server.cjs",
+    "test": "node --test"
   }
 }

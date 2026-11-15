@@ -7,26 +7,25 @@ Das auszuliefernde Frontend liegt in `dist/`. Der lokale Server und Vercel verwe
 ### 1. Node-Server auf dem PC starten
 Dein Device kann die **echten Bewegungssensoren** liefern. Node muss sie nicht simulieren: Der Server stellt nur die App bereit, während Chrome auf dem Device die Sensoren ausliest.
 
-### 1. Gemini lokal und in einer Preview testen
+### 1. OpenRouter lokal und in einer Preview testen
 
-Der lokale Entwicklungsserver verwendet dieselben KI-Funktionen wie das Deployment unter `/api/coach`; er gibt keine Mock-Antwort zurück. Der KI-Reitcoach Assistent nutzt Gemini mit transparentem OpenRouter-Fallback. Der Profi-Modus nutzt OpenRouter oder optional Ollama lokal.
+Der lokale Entwicklungsserver verwendet dieselben KI-Funktionen wie das Deployment unter `/api/coach`; er gibt keine Mock-Antwort zurück. Beide Cloud-Coaches nutzen OpenRouter Auto (`openrouter/auto`). Der Profi-Modus kann zusätzlich Ollama lokal nutzen.
 
-1. Verwende Node.js 20.6 oder neuer. Erstelle eine lokale Env-Datei und trage dort den Gemini-Schlüssel und den OpenRouter-Schlüssel für den Fallback ein:
+1. Verwende Node.js 20.6 oder neuer. Erstelle eine lokale Env-Datei und trage dort deinen OpenRouter-Schlüssel ein:
 
    ```text
-   GEMINI_API_KEY=dein-Gemini-API-Schlüssel
    OPENROUTER_API_KEY=dein-OpenRouter-API-Schlüssel
    ```
 
-   Du kannst `.env.example` nach `.env.local` kopieren. `.env.local` ist in Git ignoriert. Der KI-Reitcoach Assistent versucht zuerst Gemini und wechselt bei einem API-Fehler automatisch zu OpenRouter Auto (`openrouter/auto`). Frage, System-Prompt und validierter Trainingskontext werden beim Wechsel unverändert erneut gesendet. Für den Profi-Modus kann OpenRouter Auto direkt genutzt werden. Der Schlüssel bleibt serverseitig und darf niemals in Frontend-Dateien oder ein Commit geschrieben werden.
+   Du kannst `.env.example` nach `.env.local` kopieren. `.env.local` ist in Git ignoriert. Beide Coach-Rollen senden Frage, jeweiligen System-Prompt und validierten Trainingskontext an OpenRouter. Die Ausgabe ist auf 2.048 Tokens begrenzt, damit OpenRouter nicht das unlimitierte Standardmaximum des gewählten Modells gegen das verfügbare Kontingent prüft. Der Cloud-Aufruf wird nach 25 Sekunden abgebrochen, damit der API-Endpunkt nicht bis zum Vercel-Funktionslimit wartet. Der Schlüssel bleibt serverseitig und darf niemals in Frontend-Dateien oder ein Commit geschrieben werden. Für lokale Antworten im Profi-Modus wähle stattdessen Ollama; dabei bleiben Frage und Trainingsdaten auf dem Gerät.
 2. Für Tests am PC ohne Android-Gerät starte den Server und lass das Terminal geöffnet:
 
    ```powershell
    npm.cmd run dev
    ```
 
-   Öffne danach `http://localhost:3000/appcoach.html`. Fragen werden an Gemini gesendet und können API-Kontingent verbrauchen; bei einem Gemini-Fehler wird OpenRouter verwendet. Für den Android-Test weiter unten darf dieser Server nicht parallel laufen, da `launch.js` selbst den Server auf Port 3000 startet.
-3. Für eine Vercel-Preview die Schlüssel in **Project Settings → Environment Variables** mit den Namen `GEMINI_API_KEY` und `OPENROUTER_API_KEY` und dem Environment **Preview** hinterlegen. Wenn nur der Branch `features` die Schlüssel erhalten soll, die Preview-Branch-Einschränkung auf `features` setzen. Danach eine neue Preview-Deployment erstellen; bereits laufende Deployments übernehmen neue Variablen nicht. Schütze die Preview-URL mit Vercel Deployment Protection, damit Dritte die KI-Endpunkte nicht auf deine Kosten verwenden können.
+   Öffne danach `http://localhost:3000/appcoach.html`. Cloud-Fragen werden an OpenRouter gesendet und können dort Kosten verursachen. Für den Android-Test weiter unten darf dieser Server nicht parallel laufen, da `launch.js` selbst den Server auf Port 3000 startet.
+3. Für eine Vercel-Preview `OPENROUTER_API_KEY` in **Project Settings → Environment Variables** mit dem Environment **Preview** hinterlegen. Wenn nur der Branch `features` den Schlüssel erhalten soll, die Preview-Branch-Einschränkung auf `features` setzen. Danach eine neue Preview-Deployment erstellen; bereits laufende Deployments übernehmen neue Variablen nicht. Schütze die Preview-URL mit Vercel Deployment Protection, damit Dritte die KI-Endpunkte nicht auf deine Kosten verwenden können.
 
 Prüfe den lokalen Server bei Bedarf in einem zweiten PowerShell-Fenster:
 
@@ -35,6 +34,11 @@ curl.exe -I http://127.0.0.1:3000/appcoach.html
 ```
 
 Erwartet wird `HTTP/1.1 200 OK`.
+Die gemockten API- und Provider-Tests laufen ohne echten OpenRouter-Aufruf mit:
+
+```powershell
+npm.cmd test
+```
 
 ---
 
@@ -128,7 +132,7 @@ Das PWA-Manifest startet nach der Installation zunächst unter `profile.html`. N
 ### 4. Bewegung testen
 1. Wähle **Sensor befestigt an** und befestige das Device für alle Vergleichsmessungen an derselben Stelle.
 2. Öffne **Sensordaten vor dem ersten Ritt kalibrieren** und wähle die Gangart, die während der Messung tatsächlich geritten wird.
-3. Nimm für Schritt, Trab und Galopp jeweils eine zusammenhängende 100-Sekunden-Messung auf. Die App zeigt pro Aufnahme die lokale Rhythmus-Schätzung und die ausgewählte Gangart zum Vergleich. Frühere Messungen derselben Gangart und Sensorposition werden ersetzt. Die Rohwerte jeder Aufnahme erscheinen als CSV-Text in der Browserkonsole und können dort kopiert werden.
+3. Nimm für Schritt, Trab und Galopp jeweils eine zusammenhängende 100-Sekunden-Messung auf. Die App zeigt pro Aufnahme die lokale Rhythmus-Schätzung und die ausgewählte Gangart zum Vergleich. Frühere Messungen derselben Gangart und Sensorposition werden ersetzt. Die Rohwerte erscheinen als CSV-Text in der Browserkonsole. Nach Bestätigung der Kalibrierung kannst du alle drei Messungen zusammen als CSV-Datei herunterladen.
 4. Wiederhole die Messungen bei einer anderen Befestigungsposition separat über die Auswahl **Sensor befestigt an**. Die Daten bleiben im lokalen Browserprofil und können für die ausgewählte Position gelöscht werden.
 
 Starte die Aufnahme erst, wenn die Gangart sicher und gleichmäßig ausgeführt wird. Bediene das Device nicht während des Reitens; lasse es fest befestigt und eine andere Person die Aufnahme steuern. Die Rhythmus-/Gangart-Ausgabe ist experimentell und keine validierte Erkennung. Es werden keine Rohdaten oder Kalibrierungsdaten an den KI-Coach gesendet.
