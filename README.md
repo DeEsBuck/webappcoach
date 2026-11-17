@@ -1,20 +1,18 @@
 ## Kleines Sensor-Testsetup mit Android-Gerät
 
-Die statischen Frontend-Dateien liegen in `dist/`. Lokaler Server und Vercel liefern dieses Verzeichnis als Website-Wurzel aus; API-Funktionen und Server-Skripte bleiben im Projekt-Root.
 
 Das auszuliefernde Frontend liegt in `dist/`. Der lokale Server und Vercel verwenden dieses Verzeichnis als Webroot; die Vercel-API-Funktion bleibt unter `api/` im Repository-Root.
 
-### 1. Node-Server auf dem PC starten
-Dein Device kann die **echten Bewegungssensoren** liefern. Node muss sie nicht simulieren: Der Server stellt nur die App bereit, während Chrome auf dem Device die Sensoren ausliest.
 
-### 1. Gemini lokal und in einer Preview testen
+### 1. Node-Server auf dem PC starten, Gemini lokal und in einer Preview testen
+
+Dein Device kann die **echten Bewegungssensoren** liefern. Node muss sie nicht simulieren: Der Server stellt nur die App bereit, während Chrome auf dem Device die Sensoren ausliest.
 
 Der lokale Entwicklungsserver verwendet dieselben KI-Funktionen wie das Deployment unter `/api/coach`; er gibt keine Mock-Antwort zurück. Der KI-Reitcoach Assistent nutzt Gemini mit transparentem OpenRouter-Fallback. Der Profi-Modus nutzt OpenRouter oder optional Ollama lokal.
 
 1. Verwende Node.js 20.6 oder neuer. Erstelle eine lokale Env-Datei und trage dort den Gemini-Schlüssel und den OpenRouter-Schlüssel für den Fallback ein:
 
    ```text
-   GEMINI_API_KEY=dein-Gemini-API-Schlüssel
    OPENROUTER_API_KEY=dein-OpenRouter-API-Schlüssel
    ```
 
@@ -25,8 +23,8 @@ Der lokale Entwicklungsserver verwendet dieselben KI-Funktionen wie das Deployme
    npm.cmd run dev
    ```
 
-   Öffne danach `http://localhost:3000/appcoach.html`. Fragen werden an Gemini gesendet und können API-Kontingent verbrauchen; bei einem Gemini-Fehler wird OpenRouter verwendet. Für den Android-Test weiter unten darf dieser Server nicht parallel laufen, da `launch.js` selbst den Server auf Port 3000 startet.
-3. Für eine Vercel-Preview die Schlüssel in **Project Settings → Environment Variables** mit den Namen `GEMINI_API_KEY` und `OPENROUTER_API_KEY` und dem Environment **Preview** hinterlegen. Wenn nur der Branch `features` die Schlüssel erhalten soll, die Preview-Branch-Einschränkung auf `features` setzen. Danach eine neue Preview-Deployment erstellen; bereits laufende Deployments übernehmen neue Variablen nicht. Schütze die Preview-URL mit Vercel Deployment Protection, damit Dritte die KI-Endpunkte nicht auf deine Kosten verwenden können.
+   Öffne danach `http://localhost:3000/appcoach.html`. Fragen werden an OpenRouter gesendet. Für den Android-Test weiter unten darf dieser Server nicht parallel laufen, da `launch.js` selbst den Server auf Port 3000 startet.
+3. Für eine Vercel-Preview die Schlüssel in **Project Settings → Environment Variables** mit den Namen `OPENROUTER_API_KEY` und dem Environment **Preview** hinterlegen. Wenn nur der Branch `features` die Schlüssel erhalten soll, die Preview-Branch-Einschränkung auf `features` setzen. Danach eine neue Preview-Deployment erstellen; bereits laufende Deployments übernehmen neue Variablen nicht. Schütze die Preview-URL mit Vercel Deployment Protection, damit Dritte die KI-Endpunkte nicht auf deine Kosten verwenden können.
 
 Prüfe den lokalen Server bei Bedarf in einem zweiten PowerShell-Fenster:
 
@@ -124,14 +122,6 @@ Aktiviere die USB-Geräteerkennung und klicke beim geöffneten Device-Tab auf **
 ### PWA-Start und Einstiegsformular
 
 Das PWA-Manifest startet nach der Installation zunächst unter `profile.html`. Nach dem Ausfüllen wird die Einstiegsanalyse lokal gespeichert. Wenn du im Dialog **Weiter zu Equicoach** auswählst, speichert der Service Worker die abgeschlossene Übergabe in der Cache API und öffnet `appcoach.html`. Bei späteren PWA-Starts leitet der Service Worker den Manifest-Start von `profile.html` automatisch zur Haupt-App um. Der Service Worker cached die App-Dateien aus `dist/` für den Offline-Betrieb; KI-Anfragen an die Cloud werden bis zur nächsten Verbindung zwischengespeichert.
-
-### 4. Bewegung testen
-1. Wähle **Sensor befestigt an** und befestige das Device für alle Vergleichsmessungen an derselben Stelle.
-2. Öffne **Sensordaten vor dem ersten Ritt kalibrieren** und wähle die Gangart, die während der Messung tatsächlich geritten wird.
-3. Nimm für Schritt, Trab und Galopp jeweils eine zusammenhängende 100-Sekunden-Messung auf. Die App zeigt pro Aufnahme die lokale Rhythmus-Schätzung und die ausgewählte Gangart zum Vergleich. Frühere Messungen derselben Gangart und Sensorposition werden ersetzt. Die Rohwerte jeder Aufnahme erscheinen als CSV-Text in der Browserkonsole und können dort kopiert werden.
-4. Wiederhole die Messungen bei einer anderen Befestigungsposition separat über die Auswahl **Sensor befestigt an**. Die Daten bleiben im lokalen Browserprofil und können für die ausgewählte Position gelöscht werden.
-
-Starte die Aufnahme erst, wenn die Gangart sicher und gleichmäßig ausgeführt wird. Bediene das Device nicht während des Reitens; lasse es fest befestigt und eine andere Person die Aufnahme steuern. Die Rhythmus-/Gangart-Ausgabe ist experimentell und keine validierte Erkennung. Es werden keine Rohdaten oder Kalibrierungsdaten an den KI-Coach gesendet.
 
 ### 6. Bewegung testen
 
