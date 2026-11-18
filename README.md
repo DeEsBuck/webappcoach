@@ -8,15 +8,15 @@ Das auszuliefernde Frontend liegt in `dist/`. Der lokale Server und Vercel verwe
 
 Dein Device kann die **echten Bewegungssensoren** liefern. Node muss sie nicht simulieren: Der Server stellt nur die App bereit, während Chrome auf dem Device die Sensoren ausliest.
 
-Der lokale Entwicklungsserver verwendet dieselben KI-Funktionen wie das Deployment unter `/api/coach`; er gibt keine Mock-Antwort zurück. Der KI-Reitcoach Assistent nutzt Gemini mit transparentem OpenRouter-Fallback. Der Profi-Modus nutzt OpenRouter oder optional Ollama lokal.
+Der lokale Entwicklungsserver verwendet dieselben KI-Funktionen wie das Deployment unter `/api/coach`; er gibt keine Mock-Antwort zurück. Beide Cloud-Coaches nutzen OpenRouter Auto (`openrouter/auto`). Der Profi-Modus kann zusätzlich Ollama lokal nutzen.
 
-1. Verwende Node.js 20.6 oder neuer. Erstelle eine lokale Env-Datei und trage dort den Gemini-Schlüssel und den OpenRouter-Schlüssel für den Fallback ein:
+1. Verwende Node.js 20.6 oder neuer. Erstelle eine lokale Env-Datei und trage dort deinen OpenRouter-Schlüssel ein:
 
    ```text
    OPENROUTER_API_KEY=dein-OpenRouter-API-Schlüssel
    ```
 
-   Du kannst `.env.example` nach `.env.local` kopieren. `.env.local` ist in Git ignoriert. Der KI-Reitcoach Assistent versucht zuerst Gemini und wechselt bei einem API-Fehler automatisch zu OpenRouter Auto (`openrouter/auto`). Frage, System-Prompt und validierter Trainingskontext werden beim Wechsel unverändert erneut gesendet. Für den Profi-Modus kann OpenRouter Auto direkt genutzt werden. Der Schlüssel bleibt serverseitig und darf niemals in Frontend-Dateien oder ein Commit geschrieben werden.
+   Du kannst `.env.example` nach `.env.local` kopieren. `.env.local` ist in Git ignoriert. Beide Coach-Rollen senden Frage, jeweiligen System-Prompt und validierten Trainingskontext an OpenRouter. Die Ausgabe ist auf 2.048 Tokens begrenzt, damit OpenRouter nicht das unlimitierte Standardmaximum des gewählten Modells gegen das verfügbare Kontingent prüft. Der Cloud-Aufruf wird nach 25 Sekunden abgebrochen, damit der API-Endpunkt nicht bis zum Vercel-Funktionslimit wartet. Der Schlüssel bleibt serverseitig und darf niemals in Frontend-Dateien oder ein Commit geschrieben werden. Für lokale Antworten im Profi-Modus wähle stattdessen Ollama; dabei bleiben Frage und Trainingsdaten auf dem Gerät.
 2. Für Tests am PC ohne Android-Gerät starte den Server und lass das Terminal geöffnet:
 
    ```powershell
@@ -33,6 +33,11 @@ curl.exe -I http://127.0.0.1:3000/appcoach.html
 ```
 
 Erwartet wird `HTTP/1.1 200 OK`.
+Die gemockten API- und Provider-Tests laufen ohne echten OpenRouter-Aufruf mit:
+
+```powershell
+npm.cmd test
+```
 
 ---
 

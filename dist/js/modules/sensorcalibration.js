@@ -10,6 +10,7 @@
   const gaits = ['walk', 'trot', 'canter'];
   const maxRhythmOverlapPercent = 25;
   const gaitLabels = { walk: 'Schritt', trot: 'Trab', canter: 'Galopp' };
+  const captureCsvHeader = 'gait,sensor_mount,elapsed_ms,acceleration_x_mps2,acceleration_y_mps2,acceleration_z_mps2,includes_gravity,signal_magnitude_mps2';
   const captureDurationMs = 100000;
   const minimumCaptureDurationMs = captureDurationMs * 0.9;
   const maxCapturesPerGait = 1;
@@ -206,9 +207,7 @@
   function formatCaptureCsv(mount, gait, samples) {
     const normalized = analyzer.normalizeMotionSamples(samples);
     const firstTimestamp = normalized[0]?.timestamp ?? 0;
-    const rows = [
-      'gait,sensor_mount,elapsed_ms,acceleration_x_mps2,acceleration_y_mps2,acceleration_z_mps2,includes_gravity,signal_magnitude_mps2'
-    ];
+    const rows = [captureCsvHeader];
     normalized.forEach((sample, index) => {
       rows.push([
         gait,
@@ -222,6 +221,26 @@
       ].join(','));
     });
     return rows.join('\n');
+  }
+
+  function getCsv(mount) {
+    if (!mounts.includes(mount)) throw new Error('Unbekannte Sensorposition.');
+    const calibration = readCalibration();
+    if (calibration.confirmedMounts[mount] !== true) {
+      throw new Error('Bestätige die Kalibrierung, bevor du die CSV-Datei exportierst.');
+    }
+
+    const rows = [captureCsvHeader];
+    gaits.forEach(gait => {
+      calibration.mounts[mount][gait].forEach(capture => {
+        const captureRows = formatCaptureCsv(mount, gait, capture.samples).split('\n');
+        for (let index = 1; index < captureRows.length; index += 1) {
+          rows.push(captureRows[index]);
+        }
+      });
+    });
+    if (rows.length === 1) throw new Error('Für diese Sensorposition liegen keine Kalibrierungsdaten vor.');
+    return rows.join('\r\n');
   }
 
   function attachDeviceMotion(onSample) {
@@ -442,6 +461,7 @@
     clearMount,
     confirm,
     getConfirmedProfile,
+    getCsv,
     getSummary,
     captureDurationMs,
     maxCapturesPerGait

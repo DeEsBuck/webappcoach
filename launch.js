@@ -95,7 +95,7 @@ async function main() {
     throw new Error('Verwendung: node launch.js [ADB-GERÄTE-ID]');
   }
   if (!fs.existsSync(path.join(root, '.env.local'))) {
-    throw new Error('`.env.local` fehlt. Erstelle sie mit `Copy-Item .env.example .env.local` und trage deinen Gemini-Schlüssel ein.');
+    throw new Error('`.env.local` fehlt. Erstelle sie mit `Copy-Item .env.example .env.local` und trage deinen OpenRouter-Schlüssel ein.');
   }
   await ensureServerPortAvailable();
 

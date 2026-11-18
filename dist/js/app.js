@@ -78,7 +78,7 @@ function setupRidingButtons() {
       const bpm = result.capture.analysis.bpm;
       calibrationStatus.textContent = `${gait}-Messung lokal gespeichert (${result.capture.sampleCount} Messwerte, einmalig 100 Sekunden` +
         `${bpm ? `, Analyzer-Rhythmus ${bpm}/min` : ', noch kein klarer Rhythmus erkannt'}` +
-        `${result.replacedOldest ? ', vorherige Messung ersetzt' : ''}). CSV-Rohdaten stehen in der Browserkonsole.`;
+        `${result.replacedOldest ? ', vorherige Messung ersetzt' : ''}). CSV-Rohdaten stehen in der Browserkonsole; nach Bestätigung ist der Gesamtexport verfügbar.`;
       renderCalibrationResults();
     } catch (error) {
       calibrationStatus.textContent = error.name === 'AbortError'
@@ -101,6 +101,14 @@ function setupRidingButtons() {
       SensorCalibration.confirm(sensorMount.value);
       calibrationStatus.textContent = 'Kalibrierung bestätigt. Die automatische Gangartwahl wird beim nächsten Ritt aktiviert.';
       renderCalibrationResults();
+      if (window.confirm('Möchtest du die Kalibrierungs-Rohdaten jetzt als CSV-Datei herunterladen?')) {
+        try {
+          downloadCalibrationCsv();
+          calibrationStatus.textContent = 'Kalibrierung bestätigt. Die CSV-Datei mit den lokalen Rohdaten wurde zum Download angeboten.';
+        } catch (error) {
+          calibrationStatus.textContent = `Kalibrierung bestätigt, aber der CSV-Download ist fehlgeschlagen: ${error.message}`;
+        }
+      }
     } catch (error) {
       calibrationStatus.textContent = `Automatische Gangartwahl konnte nicht aktiviert werden: ${error.message}`;
       renderCalibrationResults();
@@ -117,6 +125,28 @@ function setupRidingButtons() {
       calibrationStatus.textContent = `Kalibrierung konnte nicht gelöscht werden: ${error.message}`;
     }
   });
+
+  function downloadCalibrationCsv() {
+    if (typeof window.Blob !== 'function' || !window.URL || typeof window.URL.createObjectURL !== 'function') {
+      throw new Error('Dieser Browser unterstützt den CSV-Dateidownload nicht.');
+    }
+
+    const csv = SensorCalibration.getCsv(sensorMount.value);
+    const blob = new window.Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    link.href = url;
+    link.download = `equicoach-kalibrierung-${sensorMount.value}-${timestamp}.csv`;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    try {
+      link.click();
+    } finally {
+      document.body.removeChild(link);
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    }
+  }
 
   function setCalibrationControls(disabled) {
     captureCalibrationBtn.disabled = disabled;
@@ -450,7 +480,7 @@ document.getElementById('askAiBtn').addEventListener('click', async () => {
   askAiBtn.disabled = true;
 
   try {
-    // API-Schlüssel niemals im Browser abfragen, speichern oder direkt an Gemini senden:
+    // API-Schlüssel niemals im Browser abfragen, speichern oder direkt an einen KI-Anbieter senden:
     // Clientseitige Schlüssel sind sichtbar und keine sichere Lösung für eine veröffentlichte App.
     // Der Serverless-Endpunkt liest den Schlüssel aus einer serverseitigen Umgebungsvariable.
     const trainingMetadata = global.equiMetadata.collectTrainingMetadata();
